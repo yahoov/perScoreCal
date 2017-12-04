@@ -1,11 +1,13 @@
 package models
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 
 	"github.com/jinzhu/gorm"
 
+	_ "github.com/jinzhu/gorm/dialects/postgres" // postgres dialect for gorm
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,6 +19,7 @@ type Category struct {
 	Parent    uint
 	Level     int32
 	Approved  bool
+	Option    int32 `gorm:"-"` // ignore this field
 }
 
 // GetLevel ...
@@ -34,6 +37,10 @@ func GetWeightRange(category *Category, db *gorm.DB) string {
 	// db.Model(&category).Related(&questions).Order("Weight asc")
 	if err != nil {
 		log.Errorf("failed to retrieve associated questions: %v", err)
+		return ""
+	}
+	if len(questions) == 0 {
+		fmt.Println("No associated questions with categoryID:", category.ID)
 		return ""
 	}
 	var weightValues []int
