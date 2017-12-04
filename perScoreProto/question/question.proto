@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+package question;
+
+service Question {
+  // Respond on login
+  rpc GetInterests (GetInterestRequest) returns (GetInterestResponse) {}
+  // Respond on login
+  rpc ApproveEntries (GetInterestRequest) returns (GetInterestResponse) {}
+  // Create a new question
+  rpc CreateQuestion (CreateQuestionRequest) returns (CreateQuestionResponse) {}
+  // Get a question
+  rpc GetQuestion (GetQuestionRequest) returns (GetQuestionResponse) {}
+}
+
+message GetInterestRequest {
+  string auth_token = 1;
+}
+
+message GetInterestResponse {
+  bool success = 1;
+  string message = 2;
+  string title = 3;
+  string body = 4;
+
+  message Answer {
+    string option1 = 1;
+    string option2 = 2;
+    string option3 = 3;
+    string option4 = 4;
+    string option5 = 5;
+    string option1 = 6;
+    string option2 = 7;
+    string option3 = 8;
+    string option4 = 9;
+  }
+
+  repeated Answer answers = 5;
+}
+
+message CreateQuestionRequest {
+  string auth_token = 1;
+  string title = 2;
+  string body = 3;
+
+  message Answer {
+    string option1 = 1;
+    string option2 = 2;
+    string option3 = 3;
+    string option4 = 4;
+    string option5 = 5;
+
+    message Category {
+      int32 id = 1;
+      string name = 2;
+      int32 option = 3;
+      int32 parent = 4;
+      repeated Category categories = 5;
+    }
+
+    message Weight {
+      int32 value = 1;
+      int32 option = 2;
+    }
+
+    repeated Weight weights = 6;
+    repeated Category categories = 7;
+  }
+
+  message Category {
+    int32 id = 1;
+    string name = 2;
+    int32 parent = 3;
+    repeated Category categories = 4;
+  }
+
+  message Weight {
+    int32 value = 1;
+  }
+
+  Answer answer = 4;
+
+  Weight weight = 5;
+  repeated Category categories = 6;
+}
+
+message CreateQuestionResponse {
+  bool success = 1;
+  string message = 2;
+
+  message Category {
+    int32 id = 1;
+    string name = 2;
+    string weight_range = 3;
+    int32 parent = 4;
+    int32 level = 5;
+  }
+
+  repeated Category categories = 3;
+}
+
+message GetQuestionRequest {
+  string auth_token = 1;
+  int32 question_id = 2;
+
+  message Answer {
+    bool option1 = 1;
+    bool option2 = 2;
+    bool option3 = 3;
+    bool option4 = 4;
+    bool option5 = 5;
+  }
+
+  Answer answer = 3;
+}
+
+message GetQuestionResponse {
+  bool success = 1;
+  string message = 2;
+  string title = 3;
+  string body = 4;
+  float score = 5;
+
+  message Answer {
+    string option1 = 1;
+    string option2 = 2;
+    string option3 = 3;
+    string option4 = 4;
+    string option5 = 5;
+  }
+
+  Answer answer = 6;
+}
