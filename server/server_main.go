@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net"
-	pb "perScoreCal/perScoreProto/question"
+	qpb "perScoreCal/perScoreProto/question"
+	upb "perScoreCal/perScoreProto/user"
 
 	"google.golang.org/grpc"
 )
@@ -20,7 +21,8 @@ func StartServer() {
 
 	// Creates a new gRPC server
 	s := grpc.NewServer()
-	pb.RegisterQuestionServer(s, &Server{})
+	upb.RegisterUserServer(s, &UserServer{})
+	qpb.RegisterQuestionServer(s, &QuestionServer{})
 	fmt.Println("perScoreCal server started on port 6060 ...")
 	s.Serve(lis)
 }
