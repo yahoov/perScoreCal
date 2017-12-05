@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	pb "perScoreCal/perScoreProto/question"
+	qpb "perScoreCal/perScoreProto/question"
 	"strconv"
 	"strings"
 
@@ -35,10 +35,10 @@ var categoriesFailed []string
 // |
 
 // CreateInDB question and return response
-func (question Question) CreateInDB(ctx context.Context, in *pb.CreateQuestionRequest, db *gorm.DB) (*pb.CreateQuestionResponse, error) {
+func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionRequest, db *gorm.DB) (*qpb.CreateQuestionResponse, error) {
 	var err error
 	var user User
-	var response = new(pb.CreateQuestionResponse)
+	var response = new(qpb.CreateQuestionResponse)
 	email := GetEmail(in.AuthToken, []byte(key))
 	if email == "" {
 		response.Success = false
@@ -98,9 +98,9 @@ func (question Question) CreateInDB(ctx context.Context, in *pb.CreateQuestionRe
 	db.Find(&categories)
 
 	for index, category := range categories {
-		// var responseCategory *pb.CreateQuestionResponse_Category
-		// response.Categories = make([]*pb.CreateQuestionResponse_Category, index)
-		response.Categories = append(response.Categories, new(pb.CreateQuestionResponse_Category))
+		// var responseCategory *qpb.CreateQuestionResponse_Category
+		// response.Categories = make([]*qpb.CreateQuestionResponse_Category, index)
+		response.Categories = append(response.Categories, new(qpb.CreateQuestionResponse_Category))
 		// fmt.Println("Index:", index)
 		// fmt.Println(response.Categories)
 		// response.Categories[index] = responseCategory
@@ -119,9 +119,9 @@ func (question Question) CreateInDB(ctx context.Context, in *pb.CreateQuestionRe
 // |
 
 // GetFromDB question in response to the previous question
-func (question Question) GetFromDB(ctx context.Context, in *pb.GetQuestionRequest, db *gorm.DB) (*pb.GetQuestionResponse, error) {
+func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionRequest, db *gorm.DB) (*qpb.GetQuestionResponse, error) {
 	var err error
-	var response *pb.GetQuestionResponse
+	var response *qpb.GetQuestionResponse
 	email := GetEmail(in.AuthToken, []byte(key))
 	var user User
 	result := db.Where("email = ?", email).First(&user).RecordNotFound()
@@ -234,7 +234,7 @@ func getNextQuestion(question Question, category Category, db *gorm.DB) (Questio
 // |
 // |
 
-func createWeight(ctx context.Context, in *pb.CreateQuestionRequest, db *gorm.DB, answer Answer) ([5]byte, error) {
+func createWeight(ctx context.Context, in *qpb.CreateQuestionRequest, db *gorm.DB, answer Answer) ([5]byte, error) {
 	var answerWeights [5]byte
 	var err error
 	for _, weight := range in.Answer.Weights {
@@ -258,7 +258,7 @@ func createWeight(ctx context.Context, in *pb.CreateQuestionRequest, db *gorm.DB
 // |
 // |
 
-func createAnswer(ctx context.Context, in *pb.CreateQuestionRequest, db *gorm.DB, question Question, user User) (Answer, error) {
+func createAnswer(ctx context.Context, in *qpb.CreateQuestionRequest, db *gorm.DB, question Question, user User) (Answer, error) {
 	var err error
 	answer := Answer{
 		UserID:     user.ID,
@@ -300,7 +300,7 @@ func createAnswer(ctx context.Context, in *pb.CreateQuestionRequest, db *gorm.DB
 // |
 // |
 
-func createQuestion(ctx context.Context, in *pb.CreateQuestionRequest, db *gorm.DB, user User, question Question) (Question, error) {
+func createQuestion(ctx context.Context, in *qpb.CreateQuestionRequest, db *gorm.DB, user User, question Question) (Question, error) {
 	question.UserID = user.ID
 	question.Title = in.Title
 	question.Body = in.Body
@@ -329,7 +329,7 @@ func createQuestion(ctx context.Context, in *pb.CreateQuestionRequest, db *gorm.
 
 var categories []Category
 
-func makeQuestionCategory(ctx context.Context, requestCategories []*pb.CreateQuestionRequest_Category, db *gorm.DB, question Question) {
+func makeQuestionCategory(ctx context.Context, requestCategories []*qpb.CreateQuestionRequest_Category, db *gorm.DB, question Question) {
 	categories = categories[:0]
 	assembleQuestionCategories(ctx, requestCategories)
 	fmt.Println("Question categories:", categories)
@@ -363,7 +363,7 @@ func makeQuestionCategory(ctx context.Context, requestCategories []*pb.CreateQue
 // |
 // |
 
-func makeAnswerCategory(ctx context.Context, requestCategories []*pb.CreateQuestionRequest_Answer_Category, db *gorm.DB, answer Answer) {
+func makeAnswerCategory(ctx context.Context, requestCategories []*qpb.CreateQuestionRequest_Answer_Category, db *gorm.DB, answer Answer) {
 	categories = categories[:0]
 	assembleAnswerCategories(ctx, requestCategories)
 	fmt.Println("Answer categories:", categories)
@@ -398,7 +398,7 @@ func makeAnswerCategory(ctx context.Context, requestCategories []*pb.CreateQuest
 // |
 // |
 
-func assembleQuestionCategories(ctx context.Context, requestCategories []*pb.CreateQuestionRequest_Category) {
+func assembleQuestionCategories(ctx context.Context, requestCategories []*qpb.CreateQuestionRequest_Category) {
 	for _, requestCategory := range requestCategories {
 		if len(requestCategory.Categories) > 0 {
 			assembleQuestionCategories(ctx, requestCategory.Categories)
@@ -417,7 +417,7 @@ func assembleQuestionCategories(ctx context.Context, requestCategories []*pb.Cre
 // |
 // |
 
-func assembleAnswerCategories(ctx context.Context, requestCategories []*pb.CreateQuestionRequest_Answer_Category) {
+func assembleAnswerCategories(ctx context.Context, requestCategories []*qpb.CreateQuestionRequest_Answer_Category) {
 	for _, requestCategory := range requestCategories {
 		if len(requestCategory.Categories) > 0 {
 			assembleAnswerCategories(ctx, requestCategory.Categories)

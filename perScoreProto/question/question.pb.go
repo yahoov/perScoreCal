@@ -583,7 +583,7 @@ const _ = grpc.SupportPackageIsVersion4
 type QuestionClient interface {
 	// Create a new question
 	CreateQuestion(ctx context.Context, in *CreateQuestionRequest, opts ...grpc.CallOption) (*CreateQuestionResponse, error)
-	// Get a question
+	// Get next question
 	GetQuestion(ctx context.Context, in *GetQuestionRequest, opts ...grpc.CallOption) (*GetQuestionResponse, error)
 }
 
@@ -618,7 +618,7 @@ func (c *questionClient) GetQuestion(ctx context.Context, in *GetQuestionRequest
 type QuestionServer interface {
 	// Create a new question
 	CreateQuestion(context.Context, *CreateQuestionRequest) (*CreateQuestionResponse, error)
-	// Get a question
+	// Get next question
 	GetQuestion(context.Context, *GetQuestionRequest) (*GetQuestionResponse, error)
 }
 
