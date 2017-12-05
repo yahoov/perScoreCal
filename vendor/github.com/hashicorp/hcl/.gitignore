@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 y.output
 
 # ignore intellij files
@@ -8,14 +7,3 @@ y.output
 *.iws
 
 *.test
-=======
-y.output
-
-# ignore intellij files
-.idea
-*.iml
-*.ipr
-*.iws
-
-*.test
->>>>>>> 5ed5fd7002ae0f8df7dddd9ef69b1ddc7987f3a2

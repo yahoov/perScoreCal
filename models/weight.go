@@ -5,7 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 
+	qpb "perScoreCal/perScoreProto/question"
+
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 )
 
 // Weight is a gorm model
@@ -21,7 +24,8 @@ type Weight struct {
 // |
 // |
 
-func CreateWeight(ctx context.Context, in *pb.CreateQuestionRequest, db *gorm.DB, answer Answer) ([5]byte, error) {
+// CreateWeight ...
+func CreateWeight(ctx context.Context, in *qpb.CreateQuestionRequest, db *gorm.DB, answer Answer) ([5]byte, error) {
 	var answerWeights [5]byte
 	var err error
 	for _, weight := range in.Answer.Weights {

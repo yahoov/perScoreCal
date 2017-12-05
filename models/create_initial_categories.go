@@ -10,15 +10,9 @@ func CreateInitialCategories(db *gorm.DB) error {
 	var err error
 	categories := [6]string{"Science", "Maths", "History", "Entertainment", "Sports", "Spirituality"}
 
-<<<<<<< HEAD
-	for _, categoryTile := range categories {
-		category := Category{
-			Name:     categoryTile,
-=======
 	for _, categoryTitle := range categories {
 		category := Category{
 			Name:     categoryTitle,
->>>>>>> 5ed5fd7002ae0f8df7dddd9ef69b1ddc7987f3a2
 			Parent:   0,
 			Level:    1,
 			Approved: true,

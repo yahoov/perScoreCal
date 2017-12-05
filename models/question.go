@@ -95,7 +95,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 		}
 	}
 
-	var categories []Category
+	categories = categories[:0]
 	db.Find(&categories)
 
 	for index, category := range categories {
