@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package user;
+
+service User {
+  // Respond on login
+  rpc GetInterests (GetInterestRequest) returns (GetInterestResponse) {}
+  // Admins can view entries
+  rpc GetEntries (GetEntriesRequest) returns (GetEntriesResponse) {}
+  // Admins can approve entries
+  rpc ApproveEntries (ApproveEntriesRequest) returns (ApproveEntriesResponse) {}
+}
+
+message GetInterestRequest {
+  string auth_token = 1;
+}
+
+message GetInterestResponse {
+  bool success = 1;
+  string message = 2;
+  string title = 3;
+  string body = 4;
+
+  message Category {
+    int32 id = 1;
+    string name = 2;
+    string weight_range = 3;
+    int32 parent = 4;
+    int32 level = 5;
+  }
+
+  repeated Category categories = 5;
+}
+
+message GetEntriesRequest {
+  string auth_token = 1;
+}
+
+message GetEntriesResponse {
+  bool success = 1;
+  string message = 2;
+
+  message Category {
+    int32 id = 1;
+    string name = 2;
+    string weight_range = 3;
+    int32 parent = 4;
+    int32 level = 5;
+  }
+
+  repeated Category categories = 3;
+
+  message Question {
+    int32 id = 1;
+    string title = 2;
+    string body = 3;
+
+    message Answer {
+      string option1 = 1;
+      string option2 = 2;
+      string option3 = 3;
+      string option4 = 4;
+      string option5 = 5;
+    }
+  }
+
+  repeated Question questions = 4;
+}
+
+message ApproveEntriesRequest {
+  string auth_token = 1;
+
+  message Category {
+    int32 id = 1;
+    bool approved = 2;
+  }
+
+  repeated Category categories = 3;
+
+  message Question {
+    int32 id = 1;
+    bool approved = 2;
+  }
+
+  repeated Question questions = 4;
+}
+
+message ApproveEntriesResponse {
+  bool success = 1;
+  string message = 2;
+}
