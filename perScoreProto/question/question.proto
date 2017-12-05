@@ -3,12 +3,50 @@ syntax = "proto3";
 package question;
 
 service Question {
+<<<<<<< HEAD
   // Create a new question
   rpc CreateQuestion (CreateQuestionRequest) returns (CreateQuestionResponse) {}
   // Get next question
   rpc GetQuestion (GetQuestionRequest) returns (GetQuestionResponse) {}
 }
 
+=======
+  // Respond on login
+  rpc GetInterests (GetInterestRequest) returns (GetInterestResponse) {}
+  // Respond on login
+  rpc ApproveEntries (GetInterestRequest) returns (GetInterestResponse) {}
+  // Create a new question
+  rpc CreateQuestion (CreateQuestionRequest) returns (CreateQuestionResponse) {}
+  // Get a question
+  rpc GetQuestion (GetQuestionRequest) returns (GetQuestionResponse) {}
+}
+
+message GetInterestRequest {
+  string auth_token = 1;
+}
+
+message GetInterestResponse {
+  bool success = 1;
+  string message = 2;
+  string title = 3;
+  string body = 4;
+
+  message Answer {
+    string option1 = 1;
+    string option2 = 2;
+    string option3 = 3;
+    string option4 = 4;
+    string option5 = 5;
+    string option1 = 6;
+    string option2 = 7;
+    string option3 = 8;
+    string option4 = 9;
+  }
+
+  repeated Answer answers = 5;
+}
+
+>>>>>>> 5ed5fd7002ae0f8df7dddd9ef69b1ddc7987f3a2
 message CreateQuestionRequest {
   string auth_token = 1;
   string title = 2;

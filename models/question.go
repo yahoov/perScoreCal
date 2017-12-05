@@ -28,6 +28,7 @@ type Question struct {
 
 const key = "fkzfgk0FY2CaYJhyXbshnPJaRrFtCwfj"
 
+var categories []Category
 var categoriesFailed []string
 
 // |
@@ -77,7 +78,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 				log.Errorf("failed to create answer: %v", err)
 			} else {
 				categoriesFailed = categoriesFailed[:0]
-				makeQuestionCategory(ctx, in.Categories, db, question)
+				createQuestionCategories(ctx, in.Categories, db, question)
 				if len(categoriesFailed) > 0 {
 					// fmt.Println("RESPONSE:", response)
 					// fmt.Printf("RESPONSE TYPE: %T", response)
@@ -234,30 +235,6 @@ func getNextQuestion(question Question, category Category, db *gorm.DB) (Questio
 // |
 // |
 
-func createWeight(ctx context.Context, in *qpb.CreateQuestionRequest, db *gorm.DB, answer Answer) ([5]byte, error) {
-	var answerWeights [5]byte
-	var err error
-	for _, weight := range in.Answer.Weights {
-		var createdWeight Weight
-		createdWeight.QuestionID = sql.NullInt64{Int64: 0, Valid: false}
-		createdWeight.AnswerID = sql.NullInt64{Int64: int64(answer.ID), Valid: true}
-		createdWeight.Value = weight.Value
-		createdWeight.Option = weight.Option
-		err = db.Create(&createdWeight).Error
-		if err != nil {
-			log.Errorf("failed to create weightage: %v", err)
-		}
-		fmt.Println("answer weight option:", weight.Option)
-		answerWeights[weight.Option-1] = byte(createdWeight.ID)
-	}
-
-	return answerWeights, err
-}
-
-// |
-// |
-// |
-
 func createAnswer(ctx context.Context, in *qpb.CreateQuestionRequest, db *gorm.DB, question Question, user User) (Answer, error) {
 	var err error
 	answer := Answer{
@@ -271,7 +248,7 @@ func createAnswer(ctx context.Context, in *qpb.CreateQuestionRequest, db *gorm.D
 	}
 
 	categoriesFailed = categoriesFailed[:0]
-	makeAnswerCategory(ctx, in.Answer.Categories, db, answer)
+	createAnswerCategories(ctx, in.Answer.Categories, db, answer)
 
 	if len(categoriesFailed) > 0 {
 		err = errors.New("Failed to create answer categories")
@@ -282,7 +259,7 @@ func createAnswer(ctx context.Context, in *qpb.CreateQuestionRequest, db *gorm.D
 			log.Errorf("failed to create answer: %v", err)
 		} else {
 			var answerWeights [5]byte
-			answerWeights, err = createWeight(ctx, in, db, answer)
+			answerWeights, err = CreateWeight(ctx, in, db, answer)
 			if err != nil {
 				log.Errorf("failed to create answer weightage: %v", err)
 			} else {
@@ -327,9 +304,7 @@ func createQuestion(ctx context.Context, in *qpb.CreateQuestionRequest, db *gorm
 // |
 // |
 
-var categories []Category
-
-func makeQuestionCategory(ctx context.Context, requestCategories []*qpb.CreateQuestionRequest_Category, db *gorm.DB, question Question) {
+func createQuestionCategories(ctx context.Context, requestCategories []*qpb.CreateQuestionRequest_Category, db *gorm.DB, question Question) {
 	categories = categories[:0]
 	assembleQuestionCategories(ctx, requestCategories)
 	fmt.Println("Question categories:", categories)
@@ -363,7 +338,7 @@ func makeQuestionCategory(ctx context.Context, requestCategories []*qpb.CreateQu
 // |
 // |
 
-func makeAnswerCategory(ctx context.Context, requestCategories []*qpb.CreateQuestionRequest_Answer_Category, db *gorm.DB, answer Answer) {
+func createAnswerCategories(ctx context.Context, requestCategories []*qpb.CreateQuestionRequest_Answer_Category, db *gorm.DB, answer Answer) {
 	categories = categories[:0]
 	assembleAnswerCategories(ctx, requestCategories)
 	fmt.Println("Answer categories:", categories)

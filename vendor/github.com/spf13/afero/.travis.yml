@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 sudo: false
 language: go
 
@@ -19,3 +20,26 @@ script:
   - go build
   - go test -race -v ./...
 
+=======
+sudo: false
+language: go
+
+go:
+  - 1.7.5
+  - 1.8
+  - tip
+
+os:
+  - linux
+  - osx
+
+matrix:
+  allow_failures:
+    - go: tip
+  fast_finish: true
+
+script:
+  - go build
+  - go test -race -v ./...
+
+>>>>>>> 5ed5fd7002ae0f8df7dddd9ef69b1ddc7987f3a2
