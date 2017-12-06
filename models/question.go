@@ -51,8 +51,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 	if result != false {
 		fmt.Println("No user found with email: ", email)
 		fmt.Println("Creating new user with email: ", email, " ...")
-		user = User{Email: email, Score: 0.0}
-		err = db.Create(&user).Error
+		user, err = CreateUser(email, db)
 		if err != nil {
 			response.Success = false
 			response.Message = "Failed to create new user"
