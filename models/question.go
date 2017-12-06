@@ -54,8 +54,8 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 		user, err = CreateUser(email, db)
 		if err != nil {
 			response.Success = false
-			response.Message = "Failed to create new user"
-			log.Errorf("failed to create answer: %v", err)
+			response.Message = "Failed to create new user. " + fmt.Sprintf("Error: %s", err)
+			log.Errorf("failed to create user: %v", err)
 		}
 	}
 
