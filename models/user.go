@@ -227,5 +227,39 @@ func (user User) ApproveEntries(ctx context.Context, in *upb.ApproveEntriesReque
 		}
 	}
 
+	var categories []Category
+	err = db.Where("approved = ?", false).Find(&categories).Error
+
+	if err != nil {
+		response.Success = false
+		response.Message = "Failed to retrieve categories"
+		log.Errorf("failed to retrieve categories: %v", err)
+	} else {
+		for index, category := range categories {
+			response.Categories = append(response.Categories, new(upb.ApproveEntriesResponse_Category))
+			response.Categories[index].Id = int32(category.ID)
+			response.Categories[index].Name = category.Name
+			response.Categories[index].Parent = int32(category.Parent)
+			response.Categories[index].Level = category.Level
+			response.Categories[index].WeightRange = GetWeightRange(&category, db)
+		}
+	}
+
+	var questions []Question
+	err = db.Where("approved = ?", false).Find(&questions).Error
+
+	if err != nil {
+		response.Success = false
+		response.Message = "Failed to retrieve questions"
+		log.Errorf("failed to retrieve questions: %v", err)
+	} else {
+		for index, question := range questions {
+			response.Questions = append(response.Questions, new(upb.ApproveEntriesResponse_Question))
+			response.Questions[index].Id = int32(question.ID)
+			response.Questions[index].Title = question.Title
+			response.Questions[index].Body = question.Body
+		}
+	}
+
 	return response, err
 }

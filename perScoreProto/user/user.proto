@@ -88,4 +88,30 @@ message ApproveEntriesRequest {
 message ApproveEntriesResponse {
   bool success = 1;
   string message = 2;
+
+  message Category {
+    int32 id = 1;
+    string name = 2;
+    string weight_range = 3;
+    int32 parent = 4;
+    int32 level = 5;
+  }
+
+  repeated Category categories = 3;
+
+  message Question {
+    int32 id = 1;
+    string title = 2;
+    string body = 3;
+
+    message Answer {
+      string option1 = 1;
+      string option2 = 2;
+      string option3 = 3;
+      string option4 = 4;
+      string option5 = 5;
+    }
+  }
+
+  repeated Question questions = 4;
 }
