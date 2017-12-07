@@ -8,8 +8,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	pb "perScoreCal/perScoreProto/user"
+	"os"
 	"testing"
+
+	upb "perScoreCal/perScoreProto/user"
 
 	"github.com/jinzhu/gorm"
 )
@@ -24,19 +26,18 @@ func TestGetEmail(t *testing.T) {
 
 func TestGetInterests(t *testing.T) {
 	var user User
-	var interestRequest pb.GetInterestRequest
-
-	db, err := gorm.Open("postgres", "host=localhost user=perscorecal dbname=per_score_cal sslmode=disable password=perscorecal-dm")
+	var interestRequest upb.GetInterestRequest
+	dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("TEST_HOST"), os.Getenv("TEST_DBNAME"), os.Getenv("TEST_USERNAME"), os.Getenv("TEST_PASSWORD"), os.Getenv("TEST_SSLMODE"))
+	db, err := gorm.Open(os.Getenv("TEST_DB_DRIVER"), dbString)
 
 	defer db.Close()
 	if err != nil {
-		t.Errorf("Error in setupdb: %+v", err)
+		t.Errorf("Error in opening DB connection: %+v", err)
 	}
-	response, err := user.GetInterests(context.Background(), &interestRequest, db)
+	_, err = user.GetInterests(context.Background(), &interestRequest, db)
 	if err != nil {
-		t.Errorf("Error", err)
+		t.Errorf("Error: %s", err)
 	}
-	fmt.Println("response,", response)
 }
 
 func Encrypt(text string) string {
