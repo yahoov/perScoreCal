@@ -17,6 +17,8 @@ import (
 	validator "gopkg.in/go-playground/validator.v9"
 )
 
+const Key = "fkzfgk0FY2CaYJhyXbshnPJaRrFtCwfj"
+
 // User is a gorm model
 type User struct {
 	gorm.Model
