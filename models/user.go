@@ -34,7 +34,8 @@ type User struct {
 // |
 
 // GetEmail from authToken
-func GetEmail(authToken string, key []byte) string {
+func GetEmail(authToken string) string {
+	key := []byte(Key)
 	ciphertext, _ := base64.URLEncoding.DecodeString(authToken)
 
 	block, err := aes.NewCipher(key)

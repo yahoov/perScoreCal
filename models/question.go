@@ -26,8 +26,6 @@ type Question struct {
 	UserID     uint
 }
 
-const key = "fkzfgk0FY2CaYJhyXbshnPJaRrFtCwfj"
-
 var categories []Category
 var categoriesFailed []string
 
@@ -40,7 +38,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 	var err error
 	var user User
 	var response = new(qpb.CreateQuestionResponse)
-	email := GetEmail(in.AuthToken, []byte(key))
+	email := GetEmail(in.AuthToken)
 	if email == "" {
 		response.Success = false
 		response.Message = "Failed to retrieve email"
@@ -122,7 +120,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionRequest, db *gorm.DB) (*qpb.GetQuestionResponse, error) {
 	var err error
 	var response *qpb.GetQuestionResponse
-	email := GetEmail(in.AuthToken, []byte(key))
+	email := GetEmail(in.AuthToken)
 	var user User
 	result := db.Where("email = ?", email).First(&user).RecordNotFound()
 	if result != false {
