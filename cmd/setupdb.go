@@ -16,7 +16,7 @@ package cmd
 
 import (
 	"fmt"
-
+	"os"
 	"perScoreCal/models"
 
 	"github.com/jinzhu/gorm"
@@ -31,8 +31,30 @@ var setupdbCmd = &cobra.Command{
 	Short: "Setup DB",
 	Long:  `Create and migrate schema`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("setupdb called")
-		db, err := gorm.Open("postgres", "host=localhost user=perscorecal dbname=per_score_cal sslmode=disable password=perscorecal-dm")
+		var db *gorm.DB
+		var err error
+		fmt.Println("setupdb called.....	", args)
+		if len(args) != 0 {
+			if args[0] == "dev" {
+				dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("DEV_HOST"), os.Getenv("DEV_DBNAME"), os.Getenv("DEV_USERNAME"), os.Getenv("DEV_PASSWORD"), os.Getenv("DEV_SSLMODE"))
+				db, err = gorm.Open(os.Getenv("DEV_DB_DRIVER"), dbString)
+				if err != nil {
+					log.Errorf("Error in setupdb: %+v", err)
+				}
+			} else if args[0] == "test" {
+				dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("TEST_HOST"), os.Getenv("TEST_DBNAME"), os.Getenv("TEST_USERNAME"), os.Getenv("TEST_PASSWORD"), os.Getenv("TEST_SSLMODE"))
+				db, err = gorm.Open(os.Getenv("TEST_DB_DRIVER"), dbString)
+				if err != nil {
+					log.Errorf("Error in setupdb: %+v", err)
+				}
+			}
+			//  else if args[0] == "uat" {
+			// 	dbString := fmt.Sprintf("host=localhost user=%s dbname=%s sslmode=%s password=%s", os.Getenv("UAT_HOST"), os.Getenv("UAT_DBNAME"), os.Getenv("UAT_SSLMODE"), os.Getenv("UAT_PASSWORD"))
+			// 	db, err = gorm.Open(os.Getenv("DB_DRIVER"), dbString)
+			// }
+		}
+		dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("DEV_HOST"), os.Getenv("DEV_DBNAME"), os.Getenv("DEV_USERNAME"), os.Getenv("DEV_PASSWORD"), os.Getenv("DEV_SSLMODE"))
+		db, err = gorm.Open(os.Getenv("DEV_DB_DRIVER"), dbString)
 		defer db.Close()
 		if err != nil {
 			log.Errorf("Error in setupdb: %+v", err)
