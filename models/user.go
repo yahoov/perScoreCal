@@ -17,8 +17,6 @@ import (
 	validator "gopkg.in/go-playground/validator.v9"
 )
 
-var validate *validator.Validate
-
 // User is a gorm model
 type User struct {
 	gorm.Model
@@ -78,16 +76,9 @@ func CreateUser(email string, db *gorm.DB) (User, error) {
 	err := validate.Struct(user)
 	if err != nil {
 		for _, err := range err.(validator.ValidationErrors) {
-			fmt.Println(err.Namespace())
-			fmt.Println(err.Field())
-			fmt.Println(err.StructNamespace()) // can differ when a custom TagNameFunc is registered or
-			fmt.Println(err.StructField())     // by passing alt name to ReportError like below
-			fmt.Println(err.Tag())
-			fmt.Println(err.ActualTag())
-			fmt.Println(err.Kind())
-			fmt.Println(err.Type())
-			fmt.Println(err.Value())
-			fmt.Println(err.Param())
+			fmt.Println()
+			fmt.Printf("*** Validation Error *** FIELD: %s, TYPE: %s, VALIDATION: %s ====\n\n",
+				err.StructField(), err.Type(), err.Tag())
 		}
 
 		return user, err
