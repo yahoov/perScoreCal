@@ -12,10 +12,10 @@ type Answer struct {
 	QuestionID  uint
 	Weights     []byte `gorm:"type=bytea"`
 	Categories  []byte `gorm:"type=bytea"`
-	Option1     string
-	Option2     string
-	Option3     string
-	Option4     string
-	Option5     string
+	Option1     string `json:"Option1"`
+	Option2     string `json:"Option2"`
+	Option3     string `json:"Option3"`
+	Option4     string `json:"Option4"`
+	Option5     string `json:"Option5"`
 	UsersAnswer UsersAnswer
 }

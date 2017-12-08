@@ -15,11 +15,11 @@ import (
 type Category struct {
 	gorm.Model
 	Questions []Question
-	Name      string
-	Parent    uint
-	Level     int32
-	Approved  bool
-	Option    int32 `gorm:"-"` // ignore this field
+	Name      string `json:"name"`
+	Parent    uint   `json:"parent"`
+	Level     int32  `json:"level"`
+	Approved  bool   `json:"approved"`
+	Option    int32  `gorm:"-"` // ignore this field
 }
 
 // GetLevel ...

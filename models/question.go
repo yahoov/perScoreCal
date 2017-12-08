@@ -17,8 +17,8 @@ import (
 // Question is a gorm model
 type Question struct {
 	gorm.Model
-	Title      string
-	Body       string
+	Title      string `json:"title"`
+	Body       string `json:"body"`
 	Answer     Answer
 	Weight     Weight
 	Approved   bool
