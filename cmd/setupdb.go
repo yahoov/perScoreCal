@@ -33,7 +33,6 @@ var setupdbCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var db *gorm.DB
 		var err error
-		fmt.Println("setupdb called.....	", args)
 		if len(args) != 0 {
 			if args[0] == "uat" {
 				dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("UAT_HOST"), os.Getenv("UAT_DBNAME"), os.Getenv("UAT_USERNAME"), os.Getenv("UAT_PASSWORD"), os.Getenv("UAT_SSLMODE"))
@@ -52,14 +51,14 @@ var setupdbCmd = &cobra.Command{
 		dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("DEV_HOST"), os.Getenv("DEV_DBNAME"), os.Getenv("DEV_USERNAME"), os.Getenv("DEV_PASSWORD"), os.Getenv("DEV_SSLMODE"))
 		db, err = gorm.Open(os.Getenv("DEV_DB_DRIVER"), dbString)
 		if err != nil {
-			log.Errorf("Error in setupdb: %+v", err)
+			log.Errorf("Error in devdbsetup: %+v", err)
 		}
 		dbString = fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("TEST_HOST"), os.Getenv("TEST_DBNAME"), os.Getenv("TEST_USERNAME"), os.Getenv("TEST_PASSWORD"), os.Getenv("TEST_SSLMODE"))
 		db, err = gorm.Open(os.Getenv("TEST_DB_DRIVER"), dbString)
-		defer db.Close()
 		if err != nil {
-			log.Errorf("Error in setupdb: %+v", err)
+			log.Errorf("Error in testdbsetup: %+v", err)
 		}
+		defer db.Close()
 		models.SetupDatabase(db)
 	},
 }
