@@ -48,10 +48,6 @@ var setupdbCmd = &cobra.Command{
 					log.Errorf("Error in setupdb: %+v", err)
 				}
 			}
-			//  else if args[0] == "uat" {
-			// 	dbString := fmt.Sprintf("host=localhost user=%s dbname=%s sslmode=%s password=%s", os.Getenv("UAT_HOST"), os.Getenv("UAT_DBNAME"), os.Getenv("UAT_SSLMODE"), os.Getenv("UAT_PASSWORD"))
-			// 	db, err = gorm.Open(os.Getenv("DB_DRIVER"), dbString)
-			// }
 		}
 		dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("DEV_HOST"), os.Getenv("DEV_DBNAME"), os.Getenv("DEV_USERNAME"), os.Getenv("DEV_PASSWORD"), os.Getenv("DEV_SSLMODE"))
 		db, err = gorm.Open(os.Getenv("DEV_DB_DRIVER"), dbString)

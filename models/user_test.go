@@ -1,42 +1,22 @@
-package models
+package models_test
 
 import (
-	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
 	"io"
-	"os"
+	"perScoreCal/models"
 	"testing"
-
-	upb "perScoreCal/perScoreProto/user"
-
-	"github.com/jinzhu/gorm"
 )
+
+const Key = "fkzfgk0FY2CaYJhyXbshnPJaRrFtCwfj"
 
 func TestGetEmail(t *testing.T) {
 	testEmail := "test@mail.com"
 	token := Encrypt(testEmail)
-	if email := GetEmail(token); email != testEmail {
+	if email := models.GetEmail(token); email != testEmail {
 		t.Errorf("Expected email to be %s, but it was %s", testEmail, email)
-	}
-}
-
-func TestGetInterests(t *testing.T) {
-	var user User
-	var interestRequest upb.GetInterestRequest
-	dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("TEST_HOST"), os.Getenv("TEST_DBNAME"), os.Getenv("TEST_USERNAME"), os.Getenv("TEST_PASSWORD"), os.Getenv("TEST_SSLMODE"))
-	db, err := gorm.Open(os.Getenv("TEST_DB_DRIVER"), dbString)
-
-	defer db.Close()
-	if err != nil {
-		t.Errorf("Error in opening DB connection: %+v", err)
-	}
-	_, err = user.GetInterests(context.Background(), &interestRequest, db)
-	if err != nil {
-		t.Errorf("Error: %s", err)
 	}
 }
 
