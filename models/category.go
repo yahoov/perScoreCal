@@ -15,11 +15,11 @@ import (
 type Category struct {
 	gorm.Model
 	Questions []Question
-	Name      string
-	Parent    uint
-	Level     int32
-	Approved  bool
-	Option    int32 `gorm:"-"` // ignore this field
+	Name      string `json:"name"`
+	Parent    uint   `json:"parent"`
+	Level     int32  `json:"level"`
+	Approved  bool   `json:"approved"`
+	Option    int32  `gorm:"-"` // ignore this field
 }
 
 // GetLevel ...
@@ -31,6 +31,8 @@ func GetLevel(category *Category, db *gorm.DB) int32 {
 
 // GetWeightRange ...
 func GetWeightRange(category *Category, db *gorm.DB) string {
+	fmt.Println("category", category.Name)
+	fmt.Println("db", db)
 	var questions []Question
 	err := db.Model(category).Association("Questions").Find(&questions).Error
 	// err := db.Preload("Category", "ID = (?)", category.ID).Find(&questions).Order("Weight asc").Error
@@ -43,6 +45,11 @@ func GetWeightRange(category *Category, db *gorm.DB) string {
 		fmt.Println("No associated questions with categoryID:", category.ID)
 		return ""
 	}
+	return WeightRange(questions)
+}
+
+//WeightRange ...
+func WeightRange(questions []Question) string {
 	var weightValues []int
 	for _, question := range questions {
 		weightValues = append(weightValues, int(question.Weight.Value))
