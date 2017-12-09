@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"os"
 
 	"golang.org/x/net/context"
 
@@ -27,7 +28,8 @@ type QuestionServer struct {
 func (s *UserServer) GetInterests(ctx context.Context, in *upb.GetInterestRequest) (*upb.GetInterestResponse, error) {
 	fmt.Println("request: ", in)
 	var result *upb.GetInterestResponse
-	db, err := gorm.Open("postgres", "host=localhost port=5432 user=perscorecal dbname=per_score_cal sslmode=disable password=perscorecal-dm")
+	dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("DEV_HOST"), os.Getenv("DEV_DBNAME"), os.Getenv("DEV_USERNAME"), os.Getenv("DEV_PASSWORD"), os.Getenv("DEV_SSLMODE"))
+	db, err := gorm.Open(os.Getenv("DEV_DB_DRIVER"), dbString)
 	defer db.Close()
 	if err != nil {
 		log.Errorf("Error opening DB connection: %+v", err)
@@ -43,7 +45,8 @@ func (s *UserServer) GetInterests(ctx context.Context, in *upb.GetInterestReques
 func (s *UserServer) GetEntries(ctx context.Context, in *upb.GetEntriesRequest) (*upb.GetEntriesResponse, error) {
 	fmt.Println("request: ", in)
 	var result *upb.GetEntriesResponse
-	db, err := gorm.Open("postgres", "host=localhost port=5432 user=perscorecal dbname=per_score_cal sslmode=disable password=perscorecal-dm")
+	dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("DEV_HOST"), os.Getenv("DEV_DBNAME"), os.Getenv("DEV_USERNAME"), os.Getenv("DEV_PASSWORD"), os.Getenv("DEV_SSLMODE"))
+	db, err := gorm.Open(os.Getenv("DEV_DB_DRIVER"), dbString)
 	defer db.Close()
 	if err != nil {
 		log.Errorf("Error opening DB connection: %+v", err)
@@ -59,7 +62,8 @@ func (s *UserServer) GetEntries(ctx context.Context, in *upb.GetEntriesRequest) 
 func (s *UserServer) ApproveEntries(ctx context.Context, in *upb.ApproveEntriesRequest) (*upb.ApproveEntriesResponse, error) {
 	fmt.Println("request: ", in)
 	var result *upb.ApproveEntriesResponse
-	db, err := gorm.Open("postgres", "host=localhost port=5432 user=perscorecal dbname=per_score_cal sslmode=disable password=perscorecal-dm")
+	dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("DEV_HOST"), os.Getenv("DEV_DBNAME"), os.Getenv("DEV_USERNAME"), os.Getenv("DEV_PASSWORD"), os.Getenv("DEV_SSLMODE"))
+	db, err := gorm.Open(os.Getenv("DEV_DB_DRIVER"), dbString)
 	defer db.Close()
 	if err != nil {
 		log.Errorf("Error opening DB connection: %+v", err)
@@ -76,7 +80,8 @@ func (s *UserServer) ApproveEntries(ctx context.Context, in *upb.ApproveEntriesR
 func (s *QuestionServer) CreateQuestion(ctx context.Context, in *qpb.CreateQuestionRequest) (*qpb.CreateQuestionResponse, error) {
 	fmt.Println("request: ", in)
 	var result *qpb.CreateQuestionResponse
-	db, err := gorm.Open("postgres", "host=localhost port=5432 user=perscorecal dbname=per_score_cal sslmode=disable password=perscorecal-dm")
+	dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("DEV_HOST"), os.Getenv("DEV_DBNAME"), os.Getenv("DEV_USERNAME"), os.Getenv("DEV_PASSWORD"), os.Getenv("DEV_SSLMODE"))
+	db, err := gorm.Open(os.Getenv("DEV_DB_DRIVER"), dbString)
 	defer db.Close()
 	if err != nil {
 		log.Errorf("Error opening DB connection: %+v", err)
@@ -93,7 +98,8 @@ func (s *QuestionServer) CreateQuestion(ctx context.Context, in *qpb.CreateQuest
 func (s *QuestionServer) GetQuestion(ctx context.Context, in *qpb.GetQuestionRequest) (*qpb.GetQuestionResponse, error) {
 	fmt.Println("request: ", in)
 	var result *qpb.GetQuestionResponse
-	db, err := gorm.Open("postgres", "host=localhost port=5432 user=perscorecal dbname=per_score_cal sslmode=disable password=perscorecal-dm")
+	dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("DEV_HOST"), os.Getenv("DEV_DBNAME"), os.Getenv("DEV_USERNAME"), os.Getenv("DEV_PASSWORD"), os.Getenv("DEV_SSLMODE"))
+	db, err := gorm.Open(os.Getenv("DEV_DB_DRIVER"), dbString)
 	defer db.Close()
 	if err != nil {
 		log.Errorf("Error opening DB connection: %+v", err)
