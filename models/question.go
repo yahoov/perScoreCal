@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	qpb "perScoreCal/perScoreProto/question"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -119,25 +120,26 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 // GetFromDB question in response to the previous question
 func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionRequest, db *gorm.DB) (*qpb.GetQuestionResponse, error) {
 	var err error
-	var response *qpb.GetQuestionResponse
+	response := new(qpb.GetQuestionResponse)
 	email := GetEmail(in.AuthToken)
 	var user User
 	result := db.Where("email = ?", email).First(&user).RecordNotFound()
-	if result != false {
+	if result != true {
 		result = db.First(&question, in.QuestionId).RecordNotFound()
-		if result != false {
+		if result != true {
 			var category Category
 			result = db.First(&category, question.CategoryID).RecordNotFound()
-			if result != false {
+			if result != true {
 				var answer Answer
 				result = db.Model(&question).Related(&answer, "Answer").RecordNotFound()
-				if result != false {
+				if result != true {
 					var option int32
 					option, err = RegisterAnswer(answer, user, in, db)
 					if err != nil {
 						response.Status = "FAILURE"
 						response.Message = "Failed to register answer of question: " + question.Title
 					} else {
+
 						var nextQuestion Question
 						nextQuestion, err = getNextQuestion(question, category, db)
 						if err != nil {
@@ -148,11 +150,14 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 							response.Message = "Successfully retreived next question"
 							response.Title = nextQuestion.Title
 							response.Body = nextQuestion.Body
-							response.Answer.Option1 = answer.Option1
-							response.Answer.Option2 = answer.Option2
-							response.Answer.Option3 = answer.Option3
-							response.Answer.Option4 = answer.Option4
-							response.Answer.Option5 = answer.Option5
+							answers := new(qpb.GetQuestionResponse_Answer)
+							answers.Option1 = answer.Option1
+							answers.Option2 = answer.Option2
+							answers.Option3 = answer.Option3
+							answers.Option4 = answer.Option4
+							answers.Option5 = answer.Option5
+
+							response.Answer = answers
 							var score float32
 							score, err = GetPersonalityScore(user, answer, option, db)
 							if err != nil {
@@ -193,7 +198,12 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 
 func getNextQuestion(question Question, category Category, db *gorm.DB) (Question, error) {
 	var nextQuestion Question
-	weight := question.Weight.Value
+	weight := new(Weight)
+	err1 := db.Where("question_id = ?", question.ID).Find(&weight).Error
+	if err1 != nil {
+		log.Errorf("failed to get question: %v", err1)
+	}
+
 	var questions []Question
 	var sortedQuestions []Question
 	err := db.Model(category).Association("Questions").Find(&questions).Error
@@ -202,12 +212,18 @@ func getNextQuestion(question Question, category Category, db *gorm.DB) (Questio
 	} else {
 		var weightValues []int
 		for _, question := range questions {
-			weightValues = append(weightValues, int(question.Weight.Value))
+			questionWeight := new(Weight)
+			err1 := db.Where("question_id = ?", question.ID).Find(&questionWeight).Error
+			if err1 != nil {
+				log.Errorf("failed to get weight: %v", err1)
+			}
+			weightValues = append(weightValues, int(questionWeight.Value))
 		}
+		sort.Ints(weightValues)
 		for _, weightValue := range weightValues {
 			if len(questions) != len(sortedQuestions) {
 				for _, dbQuestion := range questions {
-					if weightValue == int(question.Weight.Value) {
+					if weightValue == int(weight.Value) {
 						sortedQuestions = append(sortedQuestions, dbQuestion)
 					}
 				}
@@ -216,10 +232,15 @@ func getNextQuestion(question Question, category Category, db *gorm.DB) (Questio
 			}
 		}
 		for _, dbQuestion := range sortedQuestions {
+			sortedDbQuestionWeight := new(Weight)
+			err1 := db.Where("question_id = ?", dbQuestion.ID).Find(&sortedDbQuestionWeight).Error
+			if err1 != nil {
+				log.Errorf("failed to get question: %v", err1)
+			}
 			if question.Title == dbQuestion.Title {
 				continue
 			}
-			if dbQuestion.Weight.Value >= weight {
+			if sortedDbQuestionWeight.Value >= weight.Value {
 				nextQuestion = dbQuestion
 				break
 			}
@@ -227,6 +248,44 @@ func getNextQuestion(question Question, category Category, db *gorm.DB) (Questio
 	}
 	return nextQuestion, err
 }
+
+// func getNextQuestion(question Question, category Category, db *gorm.DB) (Question, error) {
+// 	var nextQuestion Question
+// 	weight := question.Weight.Value
+// 	var questions []Question
+// 	var sortedQuestions []Question
+// 	err := db.Model(category).Association("Questions").Find(&questions).Error
+// 	if err != nil {
+// 		log.Errorf("failed to get question: %v", err)
+// 	} else {
+// 		var weightValues []int
+// 		for _, question := range questions {
+//
+// 			weightValues = append(weightValues, int(question.Weight.Value))
+// 		}
+// 		for _, weightValue := range weightValues {
+// 			if len(questions) != len(sortedQuestions) {
+// 				for _, dbQuestion := range questions {
+// 					if weightValue == int(question.Weight.Value) {
+// 						sortedQuestions = append(sortedQuestions, dbQuestion)
+// 					}
+// 				}
+// 			} else {
+// 				break
+// 			}
+// 		}
+// 		for _, dbQuestion := range sortedQuestions {
+// 			if question.Title == dbQuestion.Title {
+// 				continue
+// 			}
+// 			if dbQuestion.Weight.Value >= weight {
+// 				nextQuestion = dbQuestion
+// 				break
+// 			}
+// 		}
+// 	}
+// 	return nextQuestion, err
+// }
 
 // |
 // |
@@ -302,14 +361,14 @@ func createQuestion(ctx context.Context, in *qpb.CreateQuestionRequest, db *gorm
 // |
 
 func createQuestionCategories(ctx context.Context, requestCategories []*qpb.CreateQuestionRequest_Category, db *gorm.DB, question Question) {
+	var err error
 	categories = categories[:0]
 	assembleQuestionCategories(ctx, requestCategories)
-	fmt.Println("Question categories:", categories)
 	for i := len(categories) - 1; i >= 0; i-- {
 		category := categories[i]
 		if category.Parent == 0 {
 			var dbCategory Category
-			err := db.Last(&dbCategory).Error
+			err = db.Last(&dbCategory).Error
 			if err != nil {
 				log.Errorf("failed to retrieve category: %v", err)
 			} else {
@@ -317,7 +376,11 @@ func createQuestionCategories(ctx context.Context, requestCategories []*qpb.Crea
 			}
 		}
 		category.Level = GetLevel(&category, db)
-		err := db.Create(&category).Error
+		if category.ID == 0 {
+			err = db.Create(&category).Error
+		} else {
+			err = db.Find(&category).Error
+		}
 		if err != nil {
 			log.Errorf("failed to create question category: %v", err)
 			categoriesFailed = append(categoriesFailed, category.Name)
@@ -338,7 +401,7 @@ func createQuestionCategories(ctx context.Context, requestCategories []*qpb.Crea
 func createAnswerCategories(ctx context.Context, requestCategories []*qpb.CreateQuestionRequest_Answer_Category, db *gorm.DB, answer Answer) {
 	categories = categories[:0]
 	assembleAnswerCategories(ctx, requestCategories)
-	fmt.Println("Answer categories:", categories)
+
 	for i := len(categories) - 1; i >= 0; i-- {
 		category := categories[i]
 		if category.Parent == 0 {
@@ -358,8 +421,6 @@ func createAnswerCategories(ctx context.Context, requestCategories []*qpb.Create
 		} else {
 			if category.Option != 0 {
 				answer.Categories = make([]byte, category.Option)
-				fmt.Println("Option:", category.Option-1)
-				fmt.Println(answer.Categories)
 				answer.Categories[category.Option-1] = byte(category.ID)
 			}
 		}
@@ -375,13 +436,14 @@ func assembleQuestionCategories(ctx context.Context, requestCategories []*qpb.Cr
 		if len(requestCategory.Categories) > 0 {
 			assembleQuestionCategories(ctx, requestCategory.Categories)
 		}
-		if requestCategory.Id == 0 {
-			var category Category
-			category.Name = requestCategory.Name
-			category.Approved = false
-			category.Parent = uint(requestCategory.Parent)
-			categories = append(categories, category)
-		}
+		// if requestCategory.Id == 0 {
+		var category Category
+		category.ID = uint(requestCategory.Id)
+		category.Name = requestCategory.Name
+		category.Approved = false
+		category.Parent = uint(requestCategory.Parent)
+		categories = append(categories, category)
+		// }
 	}
 }
 

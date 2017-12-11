@@ -25,24 +25,6 @@ type QuestionServer struct {
 	question models.Question
 }
 
-func (s *UserServer) GetInterests(ctx context.Context, in *upb.GetInterestRequest) (*upb.GetInterestResponse, error) {
-	fmt.Println("Request: ", in)
-	var result *upb.GetInterestResponse
-	dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("DEV_HOST"), os.Getenv("DEV_DBNAME"), os.Getenv("DEV_USERNAME"), os.Getenv("DEV_PASSWORD"), os.Getenv("DEV_SSLMODE"))
-	db, err := gorm.Open(os.Getenv("DEV_DB_DRIVER"), dbString)
-	defer db.Close()
-	if err != nil {
-		log.Errorf("Error opening DB connection: %+v", err)
-	} else {
-		result, err = s.user.GetInterests(ctx, in, db)
-		if err != nil {
-			log.Errorf("Error in GetInterests: %+v", err)
-		}
-	}
-	fmt.Println("Result: ", in)
-	return result, nil
-}
-
 func (s *UserServer) GetEntries(ctx context.Context, in *upb.GetEntriesRequest) (*upb.GetEntriesResponse, error) {
 	fmt.Println("Request: ", in)
 	var result *upb.GetEntriesResponse

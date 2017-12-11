@@ -68,6 +68,38 @@ func GetEmail(authToken string) string {
 	return email
 }
 
+// Decrypt ...
+func Decrypt(cryptoText string) map[string]string {
+	mappedResult := make(map[string]string)
+	ciphertext, _ := base64.URLEncoding.DecodeString(cryptoText)
+	key := []byte(Key)
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		panic(err)
+	}
+
+	// The IV needs to be unique, but not secure. Therefore it's common to
+	// include it at the beginning of the ciphertext.
+	if len(ciphertext) < aes.BlockSize {
+		panic("ciphertext too short")
+	}
+	iv := ciphertext[:aes.BlockSize]
+	dataByte := ciphertext[aes.BlockSize:]
+
+	stream := cipher.NewCFBDecrypter(block, iv)
+
+	// XORKeyStream can work in-place if the two arguments are the same.
+	stream.XORKeyStream(ciphertext, ciphertext)
+
+	dataArray := strings.Split(fmt.Sprintf("%s", dataByte), ",")
+
+	mappedResult["email"] = dataArray[0]
+	mappedResult["role"] = dataArray[1]
+	mappedResult["sessionTime"] = dataArray[2]
+
+	return mappedResult
+}
+
 // |
 // |
 // |
@@ -114,45 +146,42 @@ func GetPersonalityScore(user User, answer Answer, option int32, db *gorm.DB) (f
 // |
 // |
 
-// GetInterests ...
-func (user User) GetInterests(ctx context.Context, in *upb.GetInterestRequest, db *gorm.DB) (*upb.GetInterestResponse, error) {
-	var response = new(upb.GetInterestResponse)
-	var categories []Category
-	err := db.Find(&categories).Error
-
-	if err != nil {
-		response.Status = "FAILURE"
-		response.Message = "Failed to retrieve categories"
-		log.Errorf("failed to retrieve categories: %v", err)
-	} else {
-		response.Title = "Please select your interest to proceed"
-		response.Body = ""
-
-		for index, category := range categories {
-			response.Categories = append(response.Categories, new(upb.GetInterestResponse_Category))
-			response.Categories[index].Id = int32(category.ID)
-			response.Categories[index].Name = category.Name
-			response.Categories[index].Parent = int32(category.Parent)
-			response.Categories[index].Level = category.Level
-			response.Categories[index].WeightRange = GetWeightRange(&category, db)
-		}
-	}
-
-	return response, err
-}
-
-// |
-// |
-// |
-
 // GetEntries ...
 func (user User) GetEntries(ctx context.Context, in *upb.GetEntriesRequest, db *gorm.DB) (*upb.GetEntriesResponse, error) {
 	var response = new(upb.GetEntriesResponse)
 	var categories []Category
+	var err error
 	response.Status = "SUCCESS"
 	response.Message = "You are in!"
+	token := in.AuthToken
+	mappedResult := Decrypt(token)
+	fmt.Println("roleeeeee", mappedResult["role"])
+	response.Role = mappedResult["role"]
+	//admin
+	if mappedResult["role"] == "Administrator" {
+		err = db.Where("approved = ?", false).Find(&categories).Error
+		var questions []Question
+		err = db.Where("approved = ?", false).Find(&questions).Error
+		fmt.Println("admin ques", questions)
+		fmt.Println("admin categories", categories)
+		if err != nil {
+			response.Status = "FAILURE"
+			response.Message = "Failed to retrieve questions"
+			log.Errorf("failed to retrieve questions: %v", err)
+		} else {
+			for index, question := range questions {
+				response.Questions = append(response.Questions, new(upb.GetEntriesResponse_Question))
+				response.Questions[index].Id = int32(question.ID)
+				response.Questions[index].Title = question.Title
+				response.Questions[index].Body = question.Body
+			}
+		}
+	} else if mappedResult["role"] == "Questioner" {
+		err = db.Where("approved = ?", true).Find(&categories).Error
+	} else if mappedResult["role"] == "Respondent" {
+		err = db.Find(&categories).Error
+	}
 
-	err := db.Where("approved = ?", false).Find(&categories).Error
 	if err != nil {
 		response.Status = "FAILURE"
 		response.Message = "Failed to retrieve categories"
@@ -167,23 +196,7 @@ func (user User) GetEntries(ctx context.Context, in *upb.GetEntriesRequest, db *
 			response.Categories[index].WeightRange = GetWeightRange(&category, db)
 		}
 	}
-
-	var questions []Question
-	err = db.Where("approved = ?", false).Find(&questions).Error
-
-	if err != nil {
-		response.Status = "FAILURE"
-		response.Message = "Failed to retrieve questions"
-		log.Errorf("failed to retrieve questions: %v", err)
-	} else {
-		for index, question := range questions {
-			response.Questions = append(response.Questions, new(upb.GetEntriesResponse_Question))
-			response.Questions[index].Id = int32(question.ID)
-			response.Questions[index].Title = question.Title
-			response.Questions[index].Body = question.Body
-		}
-	}
-
+	fmt.Println("response get entry", response)
 	return response, err
 }
 
@@ -195,6 +208,8 @@ func (user User) GetEntries(ctx context.Context, in *upb.GetEntriesRequest, db *
 func (user User) ApproveEntries(ctx context.Context, in *upb.ApproveEntriesRequest, db *gorm.DB) (*upb.ApproveEntriesResponse, error) {
 	var err error
 	var response = new(upb.ApproveEntriesResponse)
+	response.Status = "SUCCESS"
+	response.Message = "Successfully retrived entries"
 
 	for _, category := range in.Categories {
 		if category.Approved == true {
