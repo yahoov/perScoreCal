@@ -51,6 +51,36 @@ var _ = Describe("Question", func() {
 
 		}
 	})
+
+	Describe("GetFromDB", func() {
+		var (
+			question Question
+			in       *qpb.GetQuestionRequest
+			ctx      context.Context
+		)
+		db, err := gorm.Open(os.Getenv("TEST_DB_DRIVER"), dbString)
+		defer db.Close()
+		if err != nil {
+			fmt.Println("Error opening DB connection:", err)
+		} else {
+			Context("with correct input", func() {
+				BeforeEach(func() {
+					in = getRequestData(in)
+				})
+				It("result status should be success", func() {
+					result, _ := question.GetFromDB(ctx, in, db)
+					Expect(result.Status).To(Equal("SUCCESS"))
+				})
+			})
+
+			Context("with incorrect input", func() {
+				It("result status should be failed", func() {
+					result, _ := question.GetFromDB(ctx, in, db)
+					Expect(result.Status).To(Equal("FAILURE"))
+				})
+			})
+		}
+	})
 })
 
 var _ = BeforeSuite(func() {
@@ -133,5 +163,15 @@ func createRequestData(in *qpb.CreateQuestionRequest) *qpb.CreateQuestionRequest
 			Parent: 1,
 		},
 	}
+	return in
+}
+func getRequestData(in *qpb.GetQuestionRequest) *qpb.GetQuestionRequest {
+	in.AuthToken = Encrypt("test@email.com")
+	in.GetQuestionId()
+	in.Answer.Option1 = true
+	in.Answer.Option2 = true
+	in.Answer.Option3 = true
+	in.Answer.Option4 = true
+	in.Answer.Option5 = true
 	return in
 }
