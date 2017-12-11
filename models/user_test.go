@@ -10,18 +10,19 @@ import (
 	"testing"
 )
 
-const Key = "fkzfgk0FY2CaYJhyXbshnPJaRrFtCwfj"
-
 func TestGetEmail(t *testing.T) {
-	testEmail := "test@mail.com"
-	token := Encrypt(testEmail)
-	if email := models.GetEmail(token); email != testEmail {
-		t.Errorf("Expected email to be %s, but it was %s", testEmail, email)
+	email := "test@mail.com"
+	role := "Administrator"
+	sessionInMinutes := "10"
+	text := email + "," + role + "," + sessionInMinutes
+	token := Encrypt(text)
+	if result := models.GetEmail(token); email != result {
+		t.Errorf("Expected email to be %s, but it was %s", email, result)
 	}
 }
 
 func Encrypt(text string) string {
-	key := []byte(Key)
+	key := []byte(models.Key)
 	plaintext := []byte(text)
 
 	block, err := aes.NewCipher(key)

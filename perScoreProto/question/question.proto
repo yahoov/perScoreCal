@@ -56,7 +56,7 @@ message CreateQuestionRequest {
 }
 
 message CreateQuestionResponse {
-  bool success = 1;
+  string status = 1;
   string message = 2;
 
   message Category {
@@ -86,7 +86,7 @@ message GetQuestionRequest {
 }
 
 message GetQuestionResponse {
-  bool success = 1;
+  string status = 1;
   string message = 2;
   string title = 3;
   string body = 4;

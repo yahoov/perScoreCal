@@ -3,7 +3,9 @@ syntax = "proto3";
 package user;
 
 service User {
-  // Respond on login
+  // Questioner login
+  rpc GetCategories (GetCategoriesRequest) returns (GetCategoriesResponse) {}
+  // Respondent login
   rpc GetInterests (GetInterestRequest) returns (GetInterestResponse) {}
   // Admins can view entries
   rpc GetEntries (GetEntriesRequest) returns (GetEntriesResponse) {}
@@ -16,7 +18,7 @@ message GetInterestRequest {
 }
 
 message GetInterestResponse {
-  bool success = 1;
+  string status = 1;
   string message = 2;
   string title = 3;
   string body = 4;
@@ -37,7 +39,7 @@ message GetEntriesRequest {
 }
 
 message GetEntriesResponse {
-  bool success = 1;
+  string status = 1;
   string message = 2;
 
   message Category {
@@ -86,7 +88,7 @@ message ApproveEntriesRequest {
 }
 
 message ApproveEntriesResponse {
-  bool success = 1;
+  string status = 1;
   string message = 2;
 
   message Category {

@@ -40,7 +40,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 	var response = new(qpb.CreateQuestionResponse)
 	email := GetEmail(in.AuthToken)
 	if email == "" {
-		response.Success = false
+		response.Status = "FAILURE"
 		response.Message = "Failed to retrieve email"
 		return response, errors.New("Failed to retrieve email")
 	}
@@ -51,7 +51,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 		fmt.Println("Creating new user with email: ", email, " ...")
 		user, err = CreateUser(email, db)
 		if err != nil {
-			response.Success = false
+			response.Status = "FAILURE"
 			response.Message = "Failed to create new user. " + fmt.Sprintf("Error: %s", err)
 			log.Errorf("failed to create user: %v", err)
 		}
@@ -60,7 +60,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 	if in.Title != "" {
 		question, err = createQuestion(ctx, in, db, user, question)
 		if err != nil {
-			response.Success = false
+			response.Status = "FAILURE"
 			response.Message = "Failed to create question"
 			log.Errorf("failed to create question: %v", err)
 		} else {
@@ -70,7 +70,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 				err = db.Save(&answer).Error
 			}
 			if err != nil {
-				response.Success = false
+				response.Status = "FAILURE"
 				response.Message = "Failed to create answer"
 				log.Errorf("failed to create answer: %v", err)
 			} else {
@@ -79,7 +79,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 				if len(categoriesFailed) > 0 {
 					// fmt.Println("RESPONSE:", response)
 					// fmt.Printf("RESPONSE TYPE: %T", response)
-					response.Success = false
+					response.Status = "FAILURE"
 					response.Message = "Failed to create following categories: " + strings.Join(categoriesFailed[:], ", ")
 				}
 			}
@@ -87,7 +87,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 
 		if err == nil {
 			qID := strconv.FormatUint(uint64(question.ID), 10)
-			response.Success = true
+			response.Status = "SUCCESS"
 			response.Message = "Successfully created question with ID: " + qID
 		}
 	}
@@ -135,16 +135,16 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 					var option int32
 					option, err = RegisterAnswer(answer, user, in, db)
 					if err != nil {
-						response.Success = false
+						response.Status = "FAILURE"
 						response.Message = "Failed to register answer of question: " + question.Title
 					} else {
 						var nextQuestion Question
 						nextQuestion, err = getNextQuestion(question, category, db)
 						if err != nil {
-							response.Success = false
+							response.Status = "FAILURE"
 							response.Message = "Failed to get next question for: " + question.Title
 						} else {
-							response.Success = true
+							response.Status = "SUCCESS"
 							response.Message = "Successfully retreived next question"
 							response.Title = nextQuestion.Title
 							response.Body = nextQuestion.Body
@@ -156,7 +156,7 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 							var score float32
 							score, err = GetPersonalityScore(user, answer, option, db)
 							if err != nil {
-								response.Success = false
+								response.Status = "FAILURE"
 								response.Message = "Failed to get personality score for: " + user.Email
 							} else {
 								response.Score = score
@@ -164,22 +164,22 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 						}
 					}
 				} else {
-					response.Success = false
+					response.Status = "FAILURE"
 					response.Message = "Could find answer for question: " + question.Title
 					err = errors.New(response.Message)
 				}
 			} else {
-				response.Success = false
+				response.Status = "FAILURE"
 				response.Message = "Could find category with ID: " + strconv.Itoa(int(question.CategoryID))
 				err = errors.New(response.Message)
 			}
 		} else {
-			response.Success = false
+			response.Status = "FAILURE"
 			response.Message = "Could find question with ID: " + strconv.Itoa(int(in.QuestionId))
 			err = errors.New(response.Message)
 		}
 	} else {
-		response.Success = false
+		response.Status = "FAILURE"
 		response.Message = "Could find user with email: " + email
 		err = errors.New(response.Message)
 	}

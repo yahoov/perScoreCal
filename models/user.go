@@ -63,7 +63,7 @@ func GetEmail(authToken string) string {
 	email := dataArray[0]
 	// sessionTime := dataArray[1]
 
-	fmt.Println("email: ", email)
+	fmt.Println("dataArray: ", dataArray)
 
 	return email
 }
@@ -78,10 +78,17 @@ func CreateUser(email string, db *gorm.DB) (User, error) {
 	user := User{Email: email, Score: 0.0}
 	err := validate.Struct(user)
 	if err != nil {
-		for _, err := range err.(validator.ValidationErrors) {
+		for _, errV := range err.(validator.ValidationErrors) {
+			fmt.Println("*** Validation Errors ***")
+			// fmt.Printf("*** Validation Error *** STRUCT: %s, FIELD: %s, VALIDATION: %s ====\n\n",
+			// 	errV.Namespace(), errV.StructField(), errV.Tag())
+			fmt.Println("NAMESPACE:", errV.Namespace())
+			fmt.Println("FIELD:", errV.Field())
+			fmt.Println("TAG:", errV.Tag())
+			fmt.Println("TYPE:", errV.Type())
+			fmt.Println("VALUE:", errV.Value())
+			fmt.Println("PARAM:", errV.Param())
 			fmt.Println()
-			fmt.Printf("*** Validation Error *** FIELD: %s, TYPE: %s, VALIDATION: %s ====\n\n",
-				err.StructField(), err.Type(), err.Tag())
 		}
 
 		return user, err
@@ -114,7 +121,7 @@ func (user User) GetInterests(ctx context.Context, in *upb.GetInterestRequest, d
 	err := db.Find(&categories).Error
 
 	if err != nil {
-		response.Success = false
+		response.Status = "FAILURE"
 		response.Message = "Failed to retrieve categories"
 		log.Errorf("failed to retrieve categories: %v", err)
 	} else {
@@ -142,10 +149,12 @@ func (user User) GetInterests(ctx context.Context, in *upb.GetInterestRequest, d
 func (user User) GetEntries(ctx context.Context, in *upb.GetEntriesRequest, db *gorm.DB) (*upb.GetEntriesResponse, error) {
 	var response = new(upb.GetEntriesResponse)
 	var categories []Category
-	err := db.Where("approved = ?", false).Find(&categories).Error
+	response.Status = "SUCCESS"
+	response.Message = "You are in!"
 
+	err := db.Where("approved = ?", false).Find(&categories).Error
 	if err != nil {
-		response.Success = false
+		response.Status = "FAILURE"
 		response.Message = "Failed to retrieve categories"
 		log.Errorf("failed to retrieve categories: %v", err)
 	} else {
@@ -163,7 +172,7 @@ func (user User) GetEntries(ctx context.Context, in *upb.GetEntriesRequest, db *
 	err = db.Where("approved = ?", false).Find(&questions).Error
 
 	if err != nil {
-		response.Success = false
+		response.Status = "FAILURE"
 		response.Message = "Failed to retrieve questions"
 		log.Errorf("failed to retrieve questions: %v", err)
 	} else {
@@ -192,14 +201,14 @@ func (user User) ApproveEntries(ctx context.Context, in *upb.ApproveEntriesReque
 			var dbCategory Category
 			err = db.Find(&dbCategory, uint(category.Id)).Error
 			if err != nil {
-				response.Success = false
+				response.Status = "FAILURE"
 				response.Message = "Failed to retrieve category with ID: " + strconv.Itoa(int(category.Id))
 				log.Errorf("failed to retrieve category: %v", err)
 			} else {
 				dbCategory.Approved = true
 				err = db.Save(&dbCategory).Error
 				if err != nil {
-					response.Success = false
+					response.Status = "FAILURE"
 					response.Message = "Failed to save category with ID: " + strconv.Itoa(int(category.Id))
 					log.Errorf("failed to save category: %v", err)
 				}
@@ -212,14 +221,14 @@ func (user User) ApproveEntries(ctx context.Context, in *upb.ApproveEntriesReque
 			var dbQuestion Question
 			err = db.Find(&dbQuestion, uint(question.Id)).Error
 			if err != nil {
-				response.Success = false
+				response.Status = "FAILURE"
 				response.Message = "Failed to retrieve question with ID: " + strconv.Itoa(int(question.Id))
 				log.Errorf("failed to retrieve question: %v", err)
 			} else {
 				dbQuestion.Approved = true
 				err = db.Save(&dbQuestion).Error
 				if err != nil {
-					response.Success = false
+					response.Status = "FAILURE"
 					response.Message = "Failed to save question with ID: " + strconv.Itoa(int(question.Id))
 					log.Errorf("failed to save question: %v", err)
 				}
@@ -231,7 +240,7 @@ func (user User) ApproveEntries(ctx context.Context, in *upb.ApproveEntriesReque
 	err = db.Where("approved = ?", false).Find(&categories).Error
 
 	if err != nil {
-		response.Success = false
+		response.Status = "FAILURE"
 		response.Message = "Failed to retrieve categories"
 		log.Errorf("failed to retrieve categories: %v", err)
 	} else {
@@ -249,7 +258,7 @@ func (user User) ApproveEntries(ctx context.Context, in *upb.ApproveEntriesReque
 	err = db.Where("approved = ?", false).Find(&questions).Error
 
 	if err != nil {
-		response.Success = false
+		response.Status = "FAILURE"
 		response.Message = "Failed to retrieve questions"
 		log.Errorf("failed to retrieve questions: %v", err)
 	} else {

@@ -38,14 +38,14 @@ var _ = Describe("Question", func() {
 				})
 				It("should create the question in DB", func() {
 					result, _ := question.CreateInDB(ctx, in, db)
-					Expect(result.Success).To(Equal(true))
+					Expect(result.Status).To(Equal("SUCCESS"))
 				})
 			})
 
 			Context("with incorrect input", func() {
 				It("should not create the question in DB", func() {
 					result, _ := question.CreateInDB(ctx, in, db)
-					Expect(result.Success).To(Equal(false))
+					Expect(result.Status).To(Equal("FAILURE"))
 				})
 			})
 
