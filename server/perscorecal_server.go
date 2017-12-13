@@ -25,6 +25,7 @@ type QuestionServer struct {
 	question models.Question
 }
 
+// GetInterests ...
 func (s *UserServer) GetInterests(ctx context.Context, in *upb.GetInterestRequest) (*upb.GetInterestResponse, error) {
 	fmt.Println("Request: ", in)
 	var result *upb.GetInterestResponse
@@ -43,6 +44,7 @@ func (s *UserServer) GetInterests(ctx context.Context, in *upb.GetInterestReques
 	return result, nil
 }
 
+// GetEntries ...
 func (s *UserServer) GetEntries(ctx context.Context, in *upb.GetEntriesRequest) (*upb.GetEntriesResponse, error) {
 	fmt.Println("Request: ", in)
 	var result *upb.GetEntriesResponse
@@ -61,6 +63,7 @@ func (s *UserServer) GetEntries(ctx context.Context, in *upb.GetEntriesRequest) 
 	return result, nil
 }
 
+// ApproveEntries ...
 func (s *UserServer) ApproveEntries(ctx context.Context, in *upb.ApproveEntriesRequest) (*upb.ApproveEntriesResponse, error) {
 	fmt.Println("Request: ", in)
 	var result *upb.ApproveEntriesResponse
