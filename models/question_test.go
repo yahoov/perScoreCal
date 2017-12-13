@@ -22,7 +22,8 @@ var _ = Describe("Question", func() {
 		ctx      context.Context
 	)
 
-	dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s", os.Getenv("TEST_HOST"), os.Getenv("TEST_DBNAME"), os.Getenv("TEST_USERNAME"), os.Getenv("TEST_PASSWORD"), os.Getenv("TEST_SSLMODE"))
+	dbString := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s",
+		os.Getenv("TEST_HOST"), os.Getenv("TEST_DBNAME"), os.Getenv("TEST_USERNAME"), os.Getenv("TEST_PASSWORD"), os.Getenv("TEST_SSLMODE"))
 
 	Describe("CreateInDB", func() {
 		db, err := gorm.Open(os.Getenv("TEST_DB_DRIVER"), dbString)

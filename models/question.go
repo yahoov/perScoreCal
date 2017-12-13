@@ -42,6 +42,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 	if email == "" {
 		response.Status = "FAILURE"
 		response.Message = "Failed to retrieve email"
+		log.Errorf("failed to retrieve email from token: %v", err)
 		return response, errors.New("Failed to retrieve email")
 	}
 	result := db.Where("email = ?", email).First(&user).RecordNotFound()
@@ -120,67 +121,80 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionRequest, db *gorm.DB) (*qpb.GetQuestionResponse, error) {
 	var err error
 	var response *qpb.GetQuestionResponse
-	email := GetEmail(in.AuthToken)
 	var user User
+
+	email := GetEmail(in.AuthToken)
+	if email == "" {
+		response.Status = "FAILURE"
+		response.Message = "Failed to retrieve email"
+		log.Errorf("failed to retrieve email from token: %v", err)
+		return response, errors.New("Failed to retrieve email")
+	}
+
 	result := db.Where("email = ?", email).First(&user).RecordNotFound()
 	if result != false {
-		result = db.First(&question, in.QuestionId).RecordNotFound()
+		fmt.Println("No user found with email: ", email)
+		fmt.Println("Creating new user with email: ", email, " ...")
+		user, err = CreateUser(email, db)
+		if err != nil {
+			response.Status = "FAILURE"
+			response.Message = "Failed to create new user. " + fmt.Sprintf("Error: %s", err)
+			log.Errorf("failed to create user: %v", err)
+		}
+	}
+
+	result = db.First(&question, in.QuestionId).RecordNotFound()
+	if result != false {
+		var category Category
+		result = db.First(&category, question.CategoryID).RecordNotFound()
 		if result != false {
-			var category Category
-			result = db.First(&category, question.CategoryID).RecordNotFound()
+			var answer Answer
+			result = db.Model(&question).Related(&answer, "Answer").RecordNotFound()
 			if result != false {
-				var answer Answer
-				result = db.Model(&question).Related(&answer, "Answer").RecordNotFound()
-				if result != false {
-					var option int32
-					option, err = RegisterAnswer(answer, user, in, db)
+				var option int32
+				option, err = RegisterAnswer(answer, user, in, db)
+				if err != nil {
+					response.Status = "FAILURE"
+					response.Message = "Failed to register answer of question: " + question.Title
+				} else {
+					var nextQuestion Question
+					nextQuestion, err = getNextQuestion(question, category, db)
 					if err != nil {
 						response.Status = "FAILURE"
-						response.Message = "Failed to register answer of question: " + question.Title
+						response.Message = "Failed to get next question for: " + question.Title
 					} else {
-						var nextQuestion Question
-						nextQuestion, err = getNextQuestion(question, category, db)
+						response.Status = "SUCCESS"
+						response.Message = "Successfully retreived next question"
+						response.Title = nextQuestion.Title
+						response.Body = nextQuestion.Body
+						response.Answer.Option1 = answer.Option1
+						response.Answer.Option2 = answer.Option2
+						response.Answer.Option3 = answer.Option3
+						response.Answer.Option4 = answer.Option4
+						response.Answer.Option5 = answer.Option5
+						var score float32
+						score, err = GetPersonalityScore(user, answer, option, db)
 						if err != nil {
 							response.Status = "FAILURE"
-							response.Message = "Failed to get next question for: " + question.Title
+							response.Message = "Failed to get personality score for: " + user.Email
 						} else {
-							response.Status = "SUCCESS"
-							response.Message = "Successfully retreived next question"
-							response.Title = nextQuestion.Title
-							response.Body = nextQuestion.Body
-							response.Answer.Option1 = answer.Option1
-							response.Answer.Option2 = answer.Option2
-							response.Answer.Option3 = answer.Option3
-							response.Answer.Option4 = answer.Option4
-							response.Answer.Option5 = answer.Option5
-							var score float32
-							score, err = GetPersonalityScore(user, answer, option, db)
-							if err != nil {
-								response.Status = "FAILURE"
-								response.Message = "Failed to get personality score for: " + user.Email
-							} else {
-								response.Score = score
-							}
+							response.Score = score
 						}
 					}
-				} else {
-					response.Status = "FAILURE"
-					response.Message = "Could find answer for question: " + question.Title
-					err = errors.New(response.Message)
 				}
 			} else {
 				response.Status = "FAILURE"
-				response.Message = "Could find category with ID: " + strconv.Itoa(int(question.CategoryID))
+				response.Message = "Could find answer for question: " + question.Title
 				err = errors.New(response.Message)
 			}
 		} else {
 			response.Status = "FAILURE"
-			response.Message = "Could find question with ID: " + strconv.Itoa(int(in.QuestionId))
+			response.Message = "Could find category with ID: " + strconv.Itoa(int(question.CategoryID))
 			err = errors.New(response.Message)
 		}
 	} else {
 		response.Status = "FAILURE"
-		response.Message = "Could find user with email: " + email
+		response.Message = "Could find question with ID: " + strconv.Itoa(int(in.QuestionId))
 		err = errors.New(response.Message)
 	}
 
