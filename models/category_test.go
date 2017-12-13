@@ -9,7 +9,7 @@ func TestWeightRange(t *testing.T) {
 
 	var questions = []models.Question{
 		models.Question{
-			Title:    "daya",
+			Title:    "test",
 			Body:     "12",
 			Approved: true,
 			Weight: models.Weight{
@@ -17,7 +17,7 @@ func TestWeightRange(t *testing.T) {
 			},
 		},
 		models.Question{
-			Title:    "daya",
+			Title:    "test",
 			Body:     "12",
 			Approved: true,
 			Weight: models.Weight{
@@ -25,7 +25,7 @@ func TestWeightRange(t *testing.T) {
 			},
 		},
 		models.Question{
-			Title:    "daya",
+			Title:    "test",
 			Body:     "12",
 			Approved: true,
 			Weight: models.Weight{
