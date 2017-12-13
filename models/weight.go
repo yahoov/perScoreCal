@@ -16,7 +16,7 @@ type Weight struct {
 	gorm.Model
 	QuestionID sql.NullInt64
 	AnswerID   sql.NullInt64
-	Value      int32
+	Value      float32
 	Option     int32
 }
 

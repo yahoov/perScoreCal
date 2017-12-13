@@ -43,6 +43,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 	if email == "" {
 		response.Status = "FAILURE"
 		response.Message = "Failed to retrieve email"
+		log.Errorf("failed to retrieve email from token: %v", err)
 		return response, errors.New("Failed to retrieve email")
 	}
 	result := db.Where("email = ?", email).First(&user).RecordNotFound()
@@ -120,72 +121,84 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 // GetFromDB question in response to the previous question
 func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionRequest, db *gorm.DB) (*qpb.GetQuestionResponse, error) {
 	var err error
-	response := new(qpb.GetQuestionResponse)
-	email := GetEmail(in.AuthToken)
 	var user User
+	response := new(qpb.GetQuestionResponse)
+
+	email := GetEmail(in.AuthToken)
+	if email == "" {
+		response.Status = "FAILURE"
+		response.Message = "Failed to retrieve email"
+		log.Errorf("failed to retrieve email from token: %v", err)
+		return response, errors.New("Failed to retrieve email")
+	}
+
 	result := db.Where("email = ?", email).First(&user).RecordNotFound()
-	if result != true {
-		result = db.First(&question, in.QuestionId).RecordNotFound()
-		if result != true {
-			var category Category
-			result = db.First(&category, question.CategoryID).RecordNotFound()
-			if result != true {
-				var answer Answer
-				result = db.Model(&question).Related(&answer, "Answer").RecordNotFound()
-				if result != true {
-					var option int32
-					option, err = RegisterAnswer(answer, user, in, db)
+	if result == true {
+		fmt.Println("No user found with email: ", email)
+		fmt.Println("Creating new user with email: ", email, " ...")
+		user, err = CreateUser(email, db)
+		if err != nil {
+			response.Status = "FAILURE"
+			response.Message = "Failed to create new user. " + fmt.Sprintf("Error: %s", err)
+			log.Errorf("failed to create user: %v", err)
+		}
+	}
+
+	result = db.First(&question, in.QuestionId).RecordNotFound()
+	if result == false {
+		var category Category
+		result = db.First(&category, question.CategoryID).RecordNotFound()
+		if result == false {
+			var answer Answer
+			result = db.Model(&question).Related(&answer, "Answer").RecordNotFound()
+			if result == false {
+				var option int32
+				option, err = RegisterAnswer(answer, user, in, db)
+				if err != nil {
+					response.Status = "FAILURE"
+					response.Message = "Failed to register answer of question: " + question.Title
+				} else {
+					var nextQuestion Question
+					nextQuestion, err = getNextQuestion(question, category, db)
 					if err != nil {
 						response.Status = "FAILURE"
-						response.Message = "Failed to register answer of question: " + question.Title
+						response.Message = "Failed to get next question for: " + question.Title
 					} else {
+						response.Status = "SUCCESS"
+						response.Message = "Successfully retreived next question"
+						response.Title = nextQuestion.Title
+						response.Body = nextQuestion.Body
+						answers := new(qpb.GetQuestionResponse_Answer)
+						answers.Option1 = answer.Option1
+						answers.Option2 = answer.Option2
+						answers.Option3 = answer.Option3
+						answers.Option4 = answer.Option4
+						answers.Option5 = answer.Option5
 
-						var nextQuestion Question
-						nextQuestion, err = getNextQuestion(question, category, db)
+						response.Answer = answers
+						var score float32
+						score, err = GetPersonalityScore(user, answer, option, db)
 						if err != nil {
 							response.Status = "FAILURE"
-							response.Message = "Failed to get next question for: " + question.Title
+							response.Message = "Failed to get personality score for: " + user.Email
 						} else {
-							response.Status = "SUCCESS"
-							response.Message = "Successfully retreived next question"
-							response.Title = nextQuestion.Title
-							response.Body = nextQuestion.Body
-							answers := new(qpb.GetQuestionResponse_Answer)
-							answers.Option1 = answer.Option1
-							answers.Option2 = answer.Option2
-							answers.Option3 = answer.Option3
-							answers.Option4 = answer.Option4
-							answers.Option5 = answer.Option5
-
-							response.Answer = answers
-							var score float32
-							score, err = GetPersonalityScore(user, answer, option, db)
-							if err != nil {
-								response.Status = "FAILURE"
-								response.Message = "Failed to get personality score for: " + user.Email
-							} else {
-								response.Score = score
-							}
+							response.Score = score
 						}
 					}
-				} else {
-					response.Status = "FAILURE"
-					response.Message = "Could find answer for question: " + question.Title
-					err = errors.New(response.Message)
 				}
 			} else {
 				response.Status = "FAILURE"
-				response.Message = "Could find category with ID: " + strconv.Itoa(int(question.CategoryID))
+				response.Message = "Could find answer for question: " + question.Title
 				err = errors.New(response.Message)
 			}
 		} else {
 			response.Status = "FAILURE"
-			response.Message = "Could find question with ID: " + strconv.Itoa(int(in.QuestionId))
+			response.Message = "Could find category with ID: " + strconv.Itoa(int(question.CategoryID))
 			err = errors.New(response.Message)
 		}
 	} else {
 		response.Status = "FAILURE"
-		response.Message = "Could find user with email: " + email
+		response.Message = "Could find question with ID: " + strconv.Itoa(int(in.QuestionId))
 		err = errors.New(response.Message)
 	}
 
@@ -235,7 +248,8 @@ func getNextQuestion(question Question, category Category, db *gorm.DB) (Questio
 			sortedDbQuestionWeight := new(Weight)
 			err1 := db.Where("question_id = ?", dbQuestion.ID).Find(&sortedDbQuestionWeight).Error
 			if err1 != nil {
-				log.Errorf("failed to get question: %v", err1)
+				log.Errorf("failed to get weight: %v", err1)
+				continue
 			}
 			if question.Title == dbQuestion.Title {
 				continue
@@ -248,44 +262,6 @@ func getNextQuestion(question Question, category Category, db *gorm.DB) (Questio
 	}
 	return nextQuestion, err
 }
-
-// func getNextQuestion(question Question, category Category, db *gorm.DB) (Question, error) {
-// 	var nextQuestion Question
-// 	weight := question.Weight.Value
-// 	var questions []Question
-// 	var sortedQuestions []Question
-// 	err := db.Model(category).Association("Questions").Find(&questions).Error
-// 	if err != nil {
-// 		log.Errorf("failed to get question: %v", err)
-// 	} else {
-// 		var weightValues []int
-// 		for _, question := range questions {
-//
-// 			weightValues = append(weightValues, int(question.Weight.Value))
-// 		}
-// 		for _, weightValue := range weightValues {
-// 			if len(questions) != len(sortedQuestions) {
-// 				for _, dbQuestion := range questions {
-// 					if weightValue == int(question.Weight.Value) {
-// 						sortedQuestions = append(sortedQuestions, dbQuestion)
-// 					}
-// 				}
-// 			} else {
-// 				break
-// 			}
-// 		}
-// 		for _, dbQuestion := range sortedQuestions {
-// 			if question.Title == dbQuestion.Title {
-// 				continue
-// 			}
-// 			if dbQuestion.Weight.Value >= weight {
-// 				nextQuestion = dbQuestion
-// 				break
-// 			}
-// 		}
-// 	}
-// 	return nextQuestion, err
-// }
 
 // |
 // |

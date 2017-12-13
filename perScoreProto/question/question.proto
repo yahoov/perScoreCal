@@ -30,7 +30,7 @@ message CreateQuestionRequest {
     }
 
     message Weight {
-      int32 value = 1;
+      float value = 1;
       int32 option = 2;
     }
 
@@ -46,7 +46,7 @@ message CreateQuestionRequest {
   }
 
   message Weight {
-    int32 value = 1;
+    float value = 1;
   }
 
   Answer answer = 4;

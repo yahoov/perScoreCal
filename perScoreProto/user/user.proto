@@ -39,6 +39,8 @@ message GetEntriesResponse {
       string option4 = 4;
       string option5 = 5;
     }
+
+    Answer answer = 4;
   }
 
   repeated Question questions = 4;
@@ -89,6 +91,8 @@ message ApproveEntriesResponse {
       string option4 = 4;
       string option5 = 5;
     }
+
+    Answer answer = 4;
   }
 
   repeated Question questions = 4;

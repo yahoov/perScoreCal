@@ -35,38 +35,13 @@ type User struct {
 
 // GetEmail from authToken
 func GetEmail(authToken string) string {
-	key := []byte(Key)
-	ciphertext, _ := base64.URLEncoding.DecodeString(authToken)
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		panic(err)
-	}
-
-	// The IV needs to be unique, but not secure. Therefore it's common to
-	// include it at the beginning of the ciphertext.
-	if len(ciphertext) < aes.BlockSize {
-		panic("ciphertext too short")
-	}
-	iv := ciphertext[:aes.BlockSize]
-	dataByte := ciphertext[aes.BlockSize:]
-
-	stream := cipher.NewCFBDecrypter(block, iv)
-
-	// XORKeyStream can work in-place if the two arguments are the same.
-	stream.XORKeyStream(ciphertext, ciphertext)
-
-	data := fmt.Sprintf("%s", dataByte)
-
-	dataArray := strings.Split(fmt.Sprintf("%s", data), ",")
-
-	email := dataArray[0]
-	// sessionTime := dataArray[1]
-
-	fmt.Println("dataArray: ", dataArray)
-
-	return email
+	mappedResult := Decrypt(authToken)
+	return mappedResult["email"]
 }
+
+// |
+// |
+// |
 
 // Decrypt ...
 func Decrypt(cryptoText string) map[string]string {
@@ -112,8 +87,6 @@ func CreateUser(email string, db *gorm.DB) (User, error) {
 	if err != nil {
 		for _, errV := range err.(validator.ValidationErrors) {
 			fmt.Println("*** Validation Errors ***")
-			// fmt.Printf("*** Validation Error *** STRUCT: %s, FIELD: %s, VALIDATION: %s ====\n\n",
-			// 	errV.Namespace(), errV.StructField(), errV.Tag())
 			fmt.Println("NAMESPACE:", errV.Namespace())
 			fmt.Println("FIELD:", errV.Field())
 			fmt.Println("TAG:", errV.Tag())
@@ -151,13 +124,12 @@ func (user User) GetEntries(ctx context.Context, in *upb.GetEntriesRequest, db *
 	var response = new(upb.GetEntriesResponse)
 	var categories []Category
 	var err error
+
 	response.Status = "SUCCESS"
 	response.Message = "You are in!"
-	token := in.AuthToken
-	mappedResult := Decrypt(token)
-	fmt.Println("roleeeeee", mappedResult["role"])
+	mappedResult := Decrypt(in.AuthToken)
 	response.Role = mappedResult["role"]
-	//admin
+
 	if mappedResult["role"] == "Administrator" {
 		err = db.Where("approved = ?", false).Find(&categories).Error
 		var questions []Question
@@ -171,15 +143,27 @@ func (user User) GetEntries(ctx context.Context, in *upb.GetEntriesRequest, db *
 		} else {
 			for index, question := range questions {
 				response.Questions = append(response.Questions, new(upb.GetEntriesResponse_Question))
-				response.Questions[index].Id = int32(question.ID)
-				response.Questions[index].Title = question.Title
-				response.Questions[index].Body = question.Body
+				var answer Answer
+				result := db.Where("question_id = ?", question.ID).Find(&answer).RecordNotFound()
+				if result == false {
+					responseAnswer := new(upb.GetEntriesResponse_Question_Answer)
+					responseAnswer.Option1 = answer.Option1
+					responseAnswer.Option2 = answer.Option2
+					responseAnswer.Option3 = answer.Option3
+					responseAnswer.Option4 = answer.Option4
+					responseAnswer.Option5 = answer.Option5
+					response.Questions[index].Id = int32(question.ID)
+					response.Questions[index].Title = question.Title
+					response.Questions[index].Body = question.Body
+					response.Questions[index].Answer = responseAnswer
+				} else {
+					log.Errorf("failed to retrieve answer: %v", err)
+				}
 			}
 		}
-	} else if mappedResult["role"] == "Questioner" {
+	} else {
+		// For Questioner and Respondent
 		err = db.Where("approved = ?", true).Find(&categories).Error
-	} else if mappedResult["role"] == "Respondent" {
-		err = db.Find(&categories).Error
 	}
 
 	if err != nil {
