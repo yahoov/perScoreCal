@@ -73,6 +73,7 @@ message CreateQuestionResponse {
 message GetQuestionRequest {
   string auth_token = 1;
   int32 question_id = 2;
+  int32 category_id = 3;
 
   message Answer {
     bool option1 = 1;
@@ -82,7 +83,7 @@ message GetQuestionRequest {
     bool option5 = 5;
   }
 
-  Answer answer = 3;
+  Answer answer = 4;
 }
 
 message GetQuestionResponse {

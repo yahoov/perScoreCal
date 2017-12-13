@@ -119,12 +119,14 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 // |
 
 // GetFromDB question in response to the previous question
+// GetFromDB question in response to the previous question
 func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionRequest, db *gorm.DB) (*qpb.GetQuestionResponse, error) {
 	var err error
 	var user User
 	response := new(qpb.GetQuestionResponse)
-
+	fmt.Println(in.AuthToken)
 	email := GetEmail(in.AuthToken)
+
 	if email == "" {
 		response.Status = "FAILURE"
 		response.Message = "Failed to retrieve email"
@@ -143,49 +145,24 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 			log.Errorf("failed to create user: %v", err)
 		}
 	}
-
-	result = db.First(&question, in.QuestionId).RecordNotFound()
-	if result == false {
-		var category Category
-		result = db.First(&category, question.CategoryID).RecordNotFound()
+	if in.QuestionId == 0 {
+		categoryID := in.GetCategoryId()
+		result := db.Where("category_id = ?", categoryID).First(&question).RecordNotFound()
 		if result == false {
 			var answer Answer
 			result = db.Model(&question).Related(&answer, "Answer").RecordNotFound()
 			if result == false {
-				var option int32
-				option, err = RegisterAnswer(answer, user, in, db)
-				if err != nil {
-					response.Status = "FAILURE"
-					response.Message = "Failed to register answer of question: " + question.Title
-				} else {
-					var nextQuestion Question
-					nextQuestion, err = getNextQuestion(question, category, db)
-					if err != nil {
-						response.Status = "FAILURE"
-						response.Message = "Failed to get next question for: " + question.Title
-					} else {
-						response.Status = "SUCCESS"
-						response.Message = "Successfully retreived next question"
-						response.Title = nextQuestion.Title
-						response.Body = nextQuestion.Body
-						answers := new(qpb.GetQuestionResponse_Answer)
-						answers.Option1 = answer.Option1
-						answers.Option2 = answer.Option2
-						answers.Option3 = answer.Option3
-						answers.Option4 = answer.Option4
-						answers.Option5 = answer.Option5
-
-						response.Answer = answers
-						var score float32
-						score, err = GetPersonalityScore(user, answer, option, db)
-						if err != nil {
-							response.Status = "FAILURE"
-							response.Message = "Failed to get personality score for: " + user.Email
-						} else {
-							response.Score = score
-						}
-					}
-				}
+				response.Status = "SUCCESS"
+				response.Message = "Successfully retreived next question"
+				response.Title = question.Title
+				response.Body = question.Body
+				answers := new(qpb.GetQuestionResponse_Answer)
+				answers.Option1 = answer.Option1
+				answers.Option2 = answer.Option2
+				answers.Option3 = answer.Option3
+				answers.Option4 = answer.Option4
+				answers.Option5 = answer.Option5
+				response.Answer = answers
 			} else {
 				response.Status = "FAILURE"
 				response.Message = "Could find answer for question: " + question.Title
@@ -193,13 +170,67 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 			}
 		} else {
 			response.Status = "FAILURE"
-			response.Message = "Could find category with ID: " + strconv.Itoa(int(question.CategoryID))
+			response.Message = "Could find question of this category: " + string(categoryID)
 			err = errors.New(response.Message)
 		}
 	} else {
-		response.Status = "FAILURE"
-		response.Message = "Could find question with ID: " + strconv.Itoa(int(in.QuestionId))
-		err = errors.New(response.Message)
+		result = db.First(&question, in.QuestionId).RecordNotFound()
+		if result == false {
+			var category Category
+			result = db.First(&category, question.CategoryID).RecordNotFound()
+			if result == false {
+				var answer Answer
+				result = db.Model(&question).Related(&answer, "Answer").RecordNotFound()
+				if result == false {
+					var option int32
+					option, err = RegisterAnswer(answer, user, in, db)
+					if err != nil {
+						response.Status = "FAILURE"
+						response.Message = "Failed to register answer of question: " + question.Title
+					} else {
+						var nextQuestion Question
+						nextQuestion, err = getNextQuestion(question, category, db)
+						if err != nil {
+							response.Status = "FAILURE"
+							response.Message = "Failed to get next question for: " + question.Title
+						} else {
+							response.Status = "SUCCESS"
+							response.Message = "Successfully retreived next question"
+							response.Title = nextQuestion.Title
+							response.Body = nextQuestion.Body
+							answers := new(qpb.GetQuestionResponse_Answer)
+							answers.Option1 = answer.Option1
+							answers.Option2 = answer.Option2
+							answers.Option3 = answer.Option3
+							answers.Option4 = answer.Option4
+							answers.Option5 = answer.Option5
+
+							response.Answer = answers
+							var score float32
+							score, err = GetPersonalityScore(user, answer, option, db)
+							if err != nil {
+								response.Status = "FAILURE"
+								response.Message = "Failed to get personality score for: " + user.Email
+							} else {
+								response.Score = score
+							}
+						}
+					}
+				} else {
+					response.Status = "FAILURE"
+					response.Message = "Could find answer for question: " + question.Title
+					err = errors.New(response.Message)
+				}
+			} else {
+				response.Status = "FAILURE"
+				response.Message = "Could find category with ID: " + strconv.Itoa(int(question.CategoryID))
+				err = errors.New(response.Message)
+			}
+		} else {
+			response.Status = "FAILURE"
+			response.Message = "Could find question with ID: " + strconv.Itoa(int(in.QuestionId))
+			err = errors.New(response.Message)
+		}
 	}
 
 	return response, err

@@ -35,6 +35,7 @@ type User struct {
 
 // GetEmail from authToken
 func GetEmail(authToken string) string {
+	fmt.Println("#############@@@@@@@@@@@@@@@@@@", authToken)
 	mappedResult := Decrypt(authToken)
 	return mappedResult["email"]
 }
