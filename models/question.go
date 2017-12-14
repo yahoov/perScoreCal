@@ -40,6 +40,13 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 	var user User
 	var response = new(qpb.CreateQuestionResponse)
 
+	if in.AuthToken == "" {
+		response.Status = "FAILURE"
+		response.Message = "Invalid request"
+		log.Errorf("No AuthToken received")
+		return response, errors.New(response.Message)
+	}
+
 	response.Status = "SUCCESS"
 	response.Message = "Question was created successully!"
 
@@ -130,6 +137,14 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 	var err error
 	var user User
 	response := new(qpb.GetQuestionResponse)
+
+	if in.AuthToken == "" {
+		response.Status = "FAILURE"
+		response.Message = "Invalid request"
+		log.Errorf("No AuthToken received")
+		return response, errors.New(response.Message)
+	}
+
 	email := GetEmail(in.AuthToken)
 
 	response.Status = "SUCCESS"
@@ -507,13 +522,43 @@ func getQuestionFromSubCategory(category Category, db *gorm.DB) (Question, error
 	if len(categories) > 0 {
 		for _, nextCategory := range categories {
 			result := db.Where("category_id = ?", nextCategory.ID).First(&question).RecordNotFound()
-			if result == true {
-				question, _ = getQuestionFromSubCategory(nextCategory, db)
-			} else {
+			if result == false {
 				err = nil
 				break
 			}
 		}
+
+		if question.ID == 0 {
+			for _, nextCategory := range categories {
+				result := db.Where("category_id = ?", nextCategory.ID).First(&question).RecordNotFound()
+				if result == true {
+					category = getQuestionFromChildCategory(nextCategory, db)
+				} else {
+					err = nil
+					break
+				}
+			}
+		}
+	}
+
+	return question, err
+}
+
+// |
+// |
+// |
+
+func getQuestionFromChildCategory(category Category, db *gorm.DB) (Question, error) {
+	var err error
+	var question Question
+	var nextCategory Category
+	var categories []Category
+
+	db.Where("parent = ?", category.ID).Find(&categories)
+	if len(categories) > 0 {
+		question, err = getQuestionFromSubCategory(category, db)
+	} else {
+		question, err = getQuestionFromChildCategory(category, db)
 	}
 
 	return question, err

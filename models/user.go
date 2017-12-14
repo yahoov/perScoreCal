@@ -5,6 +5,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -125,8 +126,16 @@ func (user User) GetEntries(ctx context.Context, in *upb.GetEntriesRequest, db *
 	var categories []Category
 	var err error
 
+	if in.AuthToken == "" {
+		response.Status = "FAILURE"
+		response.Message = "Invalid request"
+		log.Errorf("No AuthToken received")
+		return response, errors.New(response.Message)
+	}
+
 	response.Status = "SUCCESS"
 	response.Message = "You are in!"
+
 	mappedResult := Decrypt(in.AuthToken)
 	response.Role = mappedResult["role"]
 
