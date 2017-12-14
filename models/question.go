@@ -532,7 +532,7 @@ func getQuestionFromSubCategory(category Category, db *gorm.DB) (Question, error
 			for _, nextCategory := range categories {
 				result := db.Where("category_id = ?", nextCategory.ID).First(&question).RecordNotFound()
 				if result == true {
-					category = getQuestionFromChildCategory(nextCategory, db)
+					question, err = getQuestionFromChildCategory(nextCategory, db)
 				} else {
 					err = nil
 					break
@@ -551,7 +551,7 @@ func getQuestionFromSubCategory(category Category, db *gorm.DB) (Question, error
 func getQuestionFromChildCategory(category Category, db *gorm.DB) (Question, error) {
 	var err error
 	var question Question
-	var nextCategory Category
+	// var nextCategory Category
 	var categories []Category
 
 	db.Where("parent = ?", category.ID).Find(&categories)
