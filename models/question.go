@@ -501,15 +501,14 @@ func assembleAnswerCategories(ctx context.Context, requestCategories []*qpb.Crea
 
 func getQuestionFromSubCategory(category Category, db *gorm.DB) (Question, error) {
 	var categories []Category
-	var nextCategory Category
 	var question Question
 	err := errors.New("No question found!")
 	db.Where("parent = ?", category.ID).Find(&categories)
 	if len(categories) > 0 {
-		for category := range categories {
-			result := db.Where("category_id = ?", category.ID).First(&question).RecordNotFound()
+		for _, nextCategory := range categories {
+			result := db.Where("category_id = ?", nextCategory.ID).First(&question).RecordNotFound()
 			if result == true {
-				question, _ = getQuestionFromSubCategory(category, db)
+				question, _ = getQuestionFromSubCategory(nextCategory, db)
 			} else {
 				err = nil
 				break
