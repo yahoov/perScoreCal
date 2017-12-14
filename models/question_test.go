@@ -158,11 +158,9 @@ func createRequestData(in *qpb.CreateQuestionRequest) *qpb.CreateQuestionRequest
 	in.Weight = &qpb.CreateQuestionRequest_Weight{
 		Value: 1,
 	}
-	in.Categories = []*qpb.CreateQuestionRequest_Category{
-		&qpb.CreateQuestionRequest_Category{
-			Name:   "question_cat_1",
-			Parent: 1,
-		},
+	in.Category = &qpb.CreateQuestionRequest_Category{
+		Name:   "question_cat_1",
+		Parent: 1,
 	}
 	return in
 }

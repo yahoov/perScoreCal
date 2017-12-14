@@ -41,7 +41,7 @@ func (s *UserServer) GetEntries(ctx context.Context, in *upb.GetEntriesRequest) 
 			log.Errorf("Error in GetEntries: %+v", err)
 		}
 	}
-	fmt.Println("Result: ", in)
+	fmt.Println("Result: ", result)
 	return result, nil
 }
 
@@ -61,7 +61,7 @@ func (s *UserServer) ApproveEntries(ctx context.Context, in *upb.ApproveEntriesR
 			log.Errorf("Error in ApproveEntries: %+v", err)
 		}
 	}
-	fmt.Println("Result: ", in)
+	fmt.Println("Result: ", result)
 	return result, nil
 }
 
@@ -80,7 +80,7 @@ func (s *QuestionServer) CreateQuestion(ctx context.Context, in *qpb.CreateQuest
 			log.Errorf("Error in CreateInDB: %+v", err)
 		}
 	}
-	fmt.Println("Result: ", in)
+	fmt.Println("Result: ", result)
 	return result, nil
 }
 
@@ -99,6 +99,6 @@ func (s *QuestionServer) GetQuestion(ctx context.Context, in *qpb.GetQuestionReq
 			log.Errorf("Error in GetFromDB: %+v", err)
 		}
 	}
-	fmt.Println("Result: ", in)
+	fmt.Println("Result: ", result)
 	return result, nil
 }

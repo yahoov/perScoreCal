@@ -52,7 +52,7 @@ message CreateQuestionRequest {
   Answer answer = 4;
 
   Weight weight = 5;
-  repeated Category categories = 6;
+  Category category = 6;
 }
 
 message CreateQuestionResponse {

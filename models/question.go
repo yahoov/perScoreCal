@@ -39,6 +39,10 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 	var err error
 	var user User
 	var response = new(qpb.CreateQuestionResponse)
+
+	response.Status = "SUCCESS"
+	response.Message = "Question was created successully!"
+
 	email := GetEmail(in.AuthToken)
 	if email == "" {
 		response.Status = "FAILURE"
@@ -77,7 +81,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 				log.Errorf("failed to create answer: %v", err)
 			} else {
 				categoriesFailed = categoriesFailed[:0]
-				createQuestionCategories(ctx, in.Categories, db, question)
+				createQuestionCategories(ctx, in.Category, db, question)
 				if len(categoriesFailed) > 0 {
 					// fmt.Println("RESPONSE:", response)
 					// fmt.Printf("RESPONSE TYPE: %T", response)
@@ -92,6 +96,9 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 			response.Status = "SUCCESS"
 			response.Message = "Successfully created question with ID: " + qID
 		}
+	} else {
+		response.Status = "FAILURE"
+		response.Message = "Failed to create question"
 	}
 
 	categories = categories[:0]
@@ -119,13 +126,14 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 // |
 
 // GetFromDB question in response to the previous question
-// GetFromDB question in response to the previous question
 func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionRequest, db *gorm.DB) (*qpb.GetQuestionResponse, error) {
 	var err error
 	var user User
 	response := new(qpb.GetQuestionResponse)
-	fmt.Println(in.AuthToken)
 	email := GetEmail(in.AuthToken)
+
+	response.Status = "SUCCESS"
+	response.Message = "Next Question retrived successully!"
 
 	if email == "" {
 		response.Status = "FAILURE"
@@ -145,10 +153,17 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 			log.Errorf("failed to create user: %v", err)
 		}
 	}
+
 	if in.QuestionId == 0 {
 		categoryID := in.GetCategoryId()
-		result := db.Where("category_id = ?", categoryID).First(&question).RecordNotFound()
+		var category Category
+		result := db.Where("id = ?", categoryID).First(&category).RecordNotFound()
 		if result == false {
+			var question Question
+			result = db.Where("category_id = ?", categoryID).First(&question).RecordNotFound()
+			if result == true {
+				question, _ = getQuestionFromSubCategory(category, db)
+			}
 			var answer Answer
 			result = db.Model(&question).Related(&answer, "Answer").RecordNotFound()
 			if result == false {
@@ -367,10 +382,16 @@ func createQuestion(ctx context.Context, in *qpb.CreateQuestionRequest, db *gorm
 // |
 // |
 
-func createQuestionCategories(ctx context.Context, requestCategories []*qpb.CreateQuestionRequest_Category, db *gorm.DB, question Question) {
+func createQuestionCategories(ctx context.Context, requestCategory *qpb.CreateQuestionRequest_Category, db *gorm.DB, question Question) {
 	var err error
 	categories = categories[:0]
-	assembleQuestionCategories(ctx, requestCategories)
+	assembleQuestionCategories(ctx, requestCategory.Categories)
+	var category Category
+	category.ID = uint(requestCategory.Id)
+	category.Name = requestCategory.Name
+	category.Approved = false
+	category.Parent = uint(requestCategory.Parent)
+	categories = append(categories, category)
 	for i := len(categories) - 1; i >= 0; i-- {
 		category := categories[i]
 		if category.Parent == 0 {
@@ -472,4 +493,29 @@ func assembleAnswerCategories(ctx context.Context, requestCategories []*qpb.Crea
 			categories = append(categories, category)
 		}
 	}
+}
+
+// |
+// |
+// |
+
+func getQuestionFromSubCategory(category Category, db *gorm.DB) (Question, error) {
+	var categories []Category
+	var nextCategory Category
+	var question Question
+	err := errors.New("No question found!")
+	db.Where("parent = ?", category.ID).Find(&categories)
+	if len(categories) > 0 {
+		for category := range categories {
+			result := db.Where("category_id = ?", category.ID).First(&question).RecordNotFound()
+			if result == true {
+				question, _ = getQuestionFromSubCategory(category, db)
+			} else {
+				err = nil
+				break
+			}
+		}
+	}
+
+	return question, err
 }
