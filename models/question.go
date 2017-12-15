@@ -515,50 +515,29 @@ func assembleAnswerCategories(ctx context.Context, requestCategories []*qpb.Crea
 // |
 
 func getQuestionFromSubCategory(category Category, db *gorm.DB) (Question, error) {
+	var err error
 	var categories []Category
 	var question Question
-	err := errors.New("No question found!")
-	db.Where("parent = ?", category.ID).Find(&categories)
-	if len(categories) > 0 {
-		for _, nextCategory := range categories {
-			result := db.Where("category_id = ?", nextCategory.ID).First(&question).RecordNotFound()
-			if result == false {
-				err = nil
-				break
-			}
-		}
-
-		if question.ID == 0 {
-			for _, nextCategory := range categories {
-				result := db.Where("category_id = ?", nextCategory.ID).First(&question).RecordNotFound()
-				if result == true {
-					question, err = getQuestionFromChildCategory(nextCategory, db)
-				} else {
+	result := db.Where("category_id = ?", category.ID).First(&question).RecordNotFound()
+	if result == false {
+		return question, err
+	} else {
+		err := errors.New("No question found!")
+		db.Where("parent = ?", category.ID).Find(&categories)
+		if len(categories) > 0 {
+			for index, nextCategory := range categories {
+				result = db.Where("category_id = ?", nextCategory.ID).First(&question).RecordNotFound()
+				if result == false {
 					err = nil
 					break
+				} else {
+					question, err = getQuestionFromSubCategory(categories[index], db)
+					if err == nil {
+						break
+					}
 				}
 			}
 		}
-	}
-
-	return question, err
-}
-
-// |
-// |
-// |
-
-func getQuestionFromChildCategory(category Category, db *gorm.DB) (Question, error) {
-	var err error
-	var question Question
-	// var nextCategory Category
-	var categories []Category
-
-	db.Where("parent = ?", category.ID).Find(&categories)
-	if len(categories) > 0 {
-		question, err = getQuestionFromSubCategory(category, db)
-	} else {
-		question, err = getQuestionFromChildCategory(category, db)
 	}
 
 	return question, err
