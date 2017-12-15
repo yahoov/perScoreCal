@@ -177,7 +177,7 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 			var question Question
 			result = db.Where("category_id = ?", categoryID).First(&question).RecordNotFound()
 			if result == true {
-				question, _ = getQuestionFromSubCategory(category, db)
+				question = getQuestionFromSubCategory(category, question, db)
 			}
 			var answer Answer
 			result = db.Model(&question).Related(&answer, "Answer").RecordNotFound()
@@ -514,25 +514,18 @@ func assembleAnswerCategories(ctx context.Context, requestCategories []*qpb.Crea
 // |
 // |
 
-func getQuestionFromSubCategory(category Category, db *gorm.DB) (Question, error) {
-	var err error
+func getQuestionFromSubCategory(category Category, question Question, db *gorm.DB) Question {
 	var categories []Category
-	var question Question
-	result := db.Where("category_id = ?", category.ID).First(&question).RecordNotFound()
-	if result == false {
-		return question, err
-	} else {
-		err := errors.New("No question found!")
+	if question.ID == 0 {
 		db.Where("parent = ?", category.ID).Find(&categories)
 		if len(categories) > 0 {
 			for index, nextCategory := range categories {
-				result = db.Where("category_id = ?", nextCategory.ID).First(&question).RecordNotFound()
+				result := db.Where("category_id = ?", nextCategory.ID).First(&question).RecordNotFound()
 				if result == false {
-					err = nil
 					break
 				} else {
-					question, err = getQuestionFromSubCategory(categories[index], db)
-					if err == nil {
+					question = getQuestionFromSubCategory(categories[index], question, db)
+					if question.ID != 0 {
 						break
 					}
 				}
@@ -540,5 +533,5 @@ func getQuestionFromSubCategory(category Category, db *gorm.DB) (Question, error
 		}
 	}
 
-	return question, err
+	return question
 }
