@@ -275,6 +275,15 @@ func (user User) ApproveEntries(ctx context.Context, in *upb.ApproveEntriesReque
 			response.Questions[index].Id = int32(question.ID)
 			response.Questions[index].Title = question.Title
 			response.Questions[index].Body = question.Body
+			var answer Answer
+			result := db.Where("question_id = ?", question.ID).First(&answer).RecordNotFound()
+			if result == true {
+				response.Questions[index].Answer.Option1 = answer.Option1
+				response.Questions[index].Answer.Option2 = answer.Option2
+				response.Questions[index].Answer.Option3 = answer.Option3
+				response.Questions[index].Answer.Option4 = answer.Option4
+				response.Questions[index].Answer.Option5 = answer.Option5
+			}
 		}
 	}
 

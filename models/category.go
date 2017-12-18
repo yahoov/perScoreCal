@@ -57,5 +57,5 @@ func WeightRange(questions []Question) string {
 	sort.Ints(weightValues)
 	min := strconv.Itoa(weightValues[0])
 	max := strconv.Itoa(weightValues[len(weightValues)-1])
-	return min + ".." + max
+	return min + " .. " + max
 }

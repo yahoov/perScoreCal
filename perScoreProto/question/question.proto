@@ -89,9 +89,10 @@ message GetQuestionRequest {
 message GetQuestionResponse {
   string status = 1;
   string message = 2;
-  string title = 3;
-  string body = 4;
-  float score = 5;
+  int32 id = 3;
+  string title = 4;
+  string body = 5;
+  float score = 6;
 
   message Answer {
     string option1 = 1;
@@ -101,5 +102,5 @@ message GetQuestionResponse {
     string option5 = 5;
   }
 
-  Answer answer = 6;
+  Answer answer = 7;
 }

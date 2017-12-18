@@ -99,9 +99,8 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 		}
 
 		if err == nil {
-			qID := strconv.FormatUint(uint64(question.ID), 10)
 			response.Status = "SUCCESS"
-			response.Message = "Successfully created question with ID: " + qID
+			response.Message = "Successfully created question"
 		}
 	} else {
 		response.Status = "FAILURE"
@@ -169,6 +168,8 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 		}
 	}
 
+	fmt.Println("Request QuestionId:", in.QuestionId)
+
 	if in.QuestionId == 0 {
 		categoryID := in.GetCategoryId()
 		var category Category
@@ -176,31 +177,42 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 		if result == false {
 			var question Question
 			result = db.Where("category_id = ?", categoryID).First(&question).RecordNotFound()
-			if result == true {
-				question = getQuestionFromSubCategory(category, question, db)
-			}
-			var answer Answer
-			result = db.Model(&question).Related(&answer, "Answer").RecordNotFound()
 			if result == false {
+				var answer Answer
+				err = db.Model(&question).Related(&answer, "Answer").Error
+				if err == nil {
+					fmt.Println("Answer1: ->", answer)
+					question.Answer = answer
+					var userAnswer UsersAnswer
+					result = db.Where("user_id = ? AND answer_id = ?", user.ID, answer.ID).First(&userAnswer).RecordNotFound()
+					if result == false {
+						var nextQuestion Question
+						question = getQuestionFromSubCategory(category, nextQuestion, user, db)
+					}
+				}
+			}
+			if question.ID != 0 {
+				fmt.Println("Question: ->", question)
 				response.Status = "SUCCESS"
-				response.Message = "Successfully retreived next question"
+				response.Message = "Successfully retreived next question 1"
+				response.Id = int32(question.ID)
 				response.Title = question.Title
 				response.Body = question.Body
-				answers := new(qpb.GetQuestionResponse_Answer)
-				answers.Option1 = answer.Option1
-				answers.Option2 = answer.Option2
-				answers.Option3 = answer.Option3
-				answers.Option4 = answer.Option4
-				answers.Option5 = answer.Option5
-				response.Answer = answers
+				responseAnswer := new(qpb.GetQuestionResponse_Answer)
+				responseAnswer.Option1 = question.Answer.Option1
+				responseAnswer.Option2 = question.Answer.Option2
+				responseAnswer.Option3 = question.Answer.Option3
+				responseAnswer.Option4 = question.Answer.Option4
+				responseAnswer.Option5 = question.Answer.Option5
+				response.Answer = responseAnswer
 			} else {
 				response.Status = "FAILURE"
-				response.Message = "Could find answer for question: " + question.Title
+				response.Message = "No more open challenge available in this category"
 				err = errors.New(response.Message)
 			}
 		} else {
 			response.Status = "FAILURE"
-			response.Message = "Could find question of this category: " + string(categoryID)
+			response.Message = "Could not find question of this category: " + string(categoryID)
 			err = errors.New(response.Message)
 		}
 	} else {
@@ -225,17 +237,18 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 							response.Message = "Failed to get next question for: " + question.Title
 						} else {
 							response.Status = "SUCCESS"
-							response.Message = "Successfully retreived next question"
+							response.Message = "Successfully retreived next question 2"
+							response.Id = int32(question.ID)
 							response.Title = nextQuestion.Title
 							response.Body = nextQuestion.Body
-							answers := new(qpb.GetQuestionResponse_Answer)
-							answers.Option1 = answer.Option1
-							answers.Option2 = answer.Option2
-							answers.Option3 = answer.Option3
-							answers.Option4 = answer.Option4
-							answers.Option5 = answer.Option5
+							responseAnswer := new(qpb.GetQuestionResponse_Answer)
+							responseAnswer.Option1 = nextQuestion.Answer.Option1
+							responseAnswer.Option2 = nextQuestion.Answer.Option2
+							responseAnswer.Option3 = nextQuestion.Answer.Option3
+							responseAnswer.Option4 = nextQuestion.Answer.Option4
+							responseAnswer.Option5 = nextQuestion.Answer.Option5
 
-							response.Answer = answers
+							response.Answer = responseAnswer
 							var score float32
 							score, err = GetPersonalityScore(user, answer, option, db)
 							if err != nil {
@@ -271,25 +284,26 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 // |
 
 func getNextQuestion(question Question, category Category, db *gorm.DB) (Question, error) {
+	var err error
 	var nextQuestion Question
 	weight := new(Weight)
-	err1 := db.Where("question_id = ?", question.ID).Find(&weight).Error
-	if err1 != nil {
-		log.Errorf("failed to get question: %v", err1)
+	err = db.Where("question_id = ?", question.ID).Find(&weight).Error
+	if err != nil {
+		log.Errorf("failed to get question: %v", err)
 	}
 
 	var questions []Question
 	var sortedQuestions []Question
-	err := db.Model(category).Association("Questions").Find(&questions).Error
+	err = db.Model(category).Association("Questions").Find(&questions).Error
 	if err != nil {
 		log.Errorf("failed to get question: %v", err)
 	} else {
 		var weightValues []int
 		for _, question := range questions {
 			questionWeight := new(Weight)
-			err1 := db.Where("question_id = ?", question.ID).Find(&questionWeight).Error
-			if err1 != nil {
-				log.Errorf("failed to get weight: %v", err1)
+			err := db.Where("question_id = ?", question.ID).Find(&questionWeight).Error
+			if err != nil {
+				log.Errorf("failed to get weight: %v", err)
 			}
 			weightValues = append(weightValues, int(questionWeight.Value))
 		}
@@ -307,9 +321,9 @@ func getNextQuestion(question Question, category Category, db *gorm.DB) (Questio
 		}
 		for _, dbQuestion := range sortedQuestions {
 			sortedDbQuestionWeight := new(Weight)
-			err1 := db.Where("question_id = ?", dbQuestion.ID).Find(&sortedDbQuestionWeight).Error
-			if err1 != nil {
-				log.Errorf("failed to get weight: %v", err1)
+			err = db.Where("question_id = ?", dbQuestion.ID).Find(&sortedDbQuestionWeight).Error
+			if err != nil {
+				log.Errorf("failed to get weight: %v", err)
 				continue
 			}
 			if question.Title == dbQuestion.Title {
@@ -317,6 +331,11 @@ func getNextQuestion(question Question, category Category, db *gorm.DB) (Questio
 			}
 			if sortedDbQuestionWeight.Value >= weight.Value {
 				nextQuestion = dbQuestion
+				var answer Answer
+				err = db.Model(&nextQuestion).Related(&answer, "Answer").Error
+				if err == nil {
+					nextQuestion.Answer = answer
+				}
 				break
 			}
 		}
@@ -514,19 +533,40 @@ func assembleAnswerCategories(ctx context.Context, requestCategories []*qpb.Crea
 // |
 // |
 
-func getQuestionFromSubCategory(category Category, question Question, db *gorm.DB) Question {
+func getQuestionFromSubCategory(category Category, question Question, user User, db *gorm.DB) Question {
 	var categories []Category
 	if question.ID == 0 {
 		db.Where("parent = ?", category.ID).Find(&categories)
 		if len(categories) > 0 {
-			for index, nextCategory := range categories {
+			for _, nextCategory := range categories {
 				result := db.Where("category_id = ?", nextCategory.ID).First(&question).RecordNotFound()
 				if result == false {
-					break
+					var answer Answer
+					err := db.Model(&question).Related(&answer, "Answer").Error
+					if err == nil {
+						fmt.Println("Answer2: ->", answer)
+						var userAnswer UsersAnswer
+						result = db.Where("user_id = ? AND answer_id = ?", user.ID, answer.ID).First(&userAnswer).RecordNotFound()
+						if result == true {
+							question.Answer = answer
+							break
+						}
+					}
 				} else {
-					question = getQuestionFromSubCategory(categories[index], question, db)
+					var nextQuestion Question
+					question = getQuestionFromSubCategory(nextCategory, nextQuestion, user, db)
 					if question.ID != 0 {
-						break
+						var answer Answer
+						err := db.Model(&question).Related(&answer, "Answer").Error
+						if err == nil {
+							fmt.Println("Answer3: ->", answer)
+							var userAnswer UsersAnswer
+							result = db.Where("user_id = ? AND answer_id = ?", user.ID, answer.ID).First(&userAnswer).RecordNotFound()
+							if result == true {
+								question.Answer = answer
+								break
+							}
+						}
 					}
 				}
 			}

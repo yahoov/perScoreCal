@@ -28,17 +28,18 @@ func RegisterAnswer(answer Answer, user User, in *pb.GetQuestionRequest, db *gor
 }
 
 func getOption(answer *pb.GetQuestionRequest_Answer) int32 {
+	var result int32
 	if answer.Option1 == true {
-		return 1
+		result = 0
 	} else if answer.Option2 == true {
-		return 2
+		result = 1
 	} else if answer.Option3 == true {
-		return 3
+		result = 2
 	} else if answer.Option4 == true {
-		return 4
+		result = 3
 	} else if answer.Option5 == true {
-		return 5
+		result = 4
 	}
 
-	return 0
+	return result
 }
