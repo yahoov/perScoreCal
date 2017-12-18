@@ -171,7 +171,6 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 	fmt.Println("Request QuestionId:", in.QuestionId)
 
 	if in.QuestionId == 0 {
-		var answer Answer
 		categoryID := in.GetCategoryId()
 		var category Category
 		result := db.Where("id = ?", categoryID).First(&category).RecordNotFound()
@@ -179,6 +178,7 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 			var question Question
 			result = db.Where("category_id = ?", categoryID).First(&question).RecordNotFound()
 			if result == false {
+				var answer Answer
 				err = db.Model(&question).Related(&answer, "Answer").Error
 				if err == nil {
 					fmt.Println("Answer1: ->", answer)
@@ -204,15 +204,6 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 				responseAnswer.Option4 = question.Answer.Option4
 				responseAnswer.Option5 = question.Answer.Option5
 				response.Answer = responseAnswer
-
-				var score float32
-				score, err = GetPersonalityScore(user, answer, option, db)
-				if err != nil {
-					response.Status = "FAILURE"
-					response.Message = "Failed to get personality score for: " + user.Email
-				} else {
-					response.Score = score
-				}
 			} else {
 				response.Status = "FAILURE"
 				response.Message = "No more open challenge available in this category"
