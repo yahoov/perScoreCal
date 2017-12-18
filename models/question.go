@@ -171,6 +171,7 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 	fmt.Println("Request QuestionId:", in.QuestionId)
 
 	if in.QuestionId == 0 {
+		var answer Answer
 		categoryID := in.GetCategoryId()
 		var category Category
 		result := db.Where("id = ?", categoryID).First(&category).RecordNotFound()
@@ -178,7 +179,6 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 			var question Question
 			result = db.Where("category_id = ?", categoryID).First(&question).RecordNotFound()
 			if result == false {
-				var answer Answer
 				err = db.Model(&question).Related(&answer, "Answer").Error
 				if err == nil {
 					fmt.Println("Answer1: ->", answer)
@@ -186,8 +186,7 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 					var userAnswer UsersAnswer
 					result = db.Where("user_id = ? AND answer_id = ?", user.ID, answer.ID).First(&userAnswer).RecordNotFound()
 					if result == false {
-						var nextQuestion Question
-						question = getQuestionFromSubCategory(category, nextQuestion, user, db)
+						question = getQuestionFromSubCategory(category, question, user, db)
 					}
 				}
 			}
@@ -205,6 +204,21 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 				responseAnswer.Option4 = question.Answer.Option4
 				responseAnswer.Option5 = question.Answer.Option5
 				response.Answer = responseAnswer
+
+				var option int32
+				option, err = RegisterAnswer(answer, user, in, db)
+				if err != nil {
+					response.Status = "FAILURE"
+					response.Message = "Failed to register answer of question: " + question.Title
+				}
+				var score float32
+				score, err = GetPersonalityScore(user, answer, option, db)
+				if err != nil {
+					response.Status = "FAILURE"
+					response.Message = "Failed to get personality score for: " + user.Email
+				} else {
+					response.Score = score
+				}
 			} else {
 				response.Status = "FAILURE"
 				response.Message = "No more open challenge available in this category"
@@ -247,8 +261,8 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 							responseAnswer.Option3 = nextQuestion.Answer.Option3
 							responseAnswer.Option4 = nextQuestion.Answer.Option4
 							responseAnswer.Option5 = nextQuestion.Answer.Option5
-
 							response.Answer = responseAnswer
+
 							var score float32
 							score, err = GetPersonalityScore(user, answer, option, db)
 							if err != nil {
@@ -535,43 +549,70 @@ func assembleAnswerCategories(ctx context.Context, requestCategories []*qpb.Crea
 
 func getQuestionFromSubCategory(category Category, question Question, user User, db *gorm.DB) Question {
 	var categories []Category
-	if question.ID == 0 {
-		db.Where("parent = ?", category.ID).Find(&categories)
-		if len(categories) > 0 {
-			for _, nextCategory := range categories {
-				result := db.Where("category_id = ?", nextCategory.ID).First(&question).RecordNotFound()
-				if result == false {
-					var answer Answer
-					err := db.Model(&question).Related(&answer, "Answer").Error
-					if err == nil {
-						fmt.Println("Answer2: ->", answer)
-						var userAnswer UsersAnswer
-						result = db.Where("user_id = ? AND answer_id = ?", user.ID, answer.ID).First(&userAnswer).RecordNotFound()
-						if result == true {
-							question.Answer = answer
-							break
-						}
-					}
-				} else {
-					var nextQuestion Question
-					question = getQuestionFromSubCategory(nextCategory, nextQuestion, user, db)
-					if question.ID != 0 {
-						var answer Answer
-						err := db.Model(&question).Related(&answer, "Answer").Error
-						if err == nil {
-							fmt.Println("Answer3: ->", answer)
-							var userAnswer UsersAnswer
-							result = db.Where("user_id = ? AND answer_id = ?", user.ID, answer.ID).First(&userAnswer).RecordNotFound()
-							if result == true {
-								question.Answer = answer
-								break
-							}
-						}
-					}
+	var nextQuestion Question
+	fmt.Println("Question--ID:", nextQuestion.ID)
+	result := db.Where("category_id = ? AND id != ?", category.ID, question.ID).First(&nextQuestion).RecordNotFound()
+	if result == false {
+		fmt.Println("Next Question--ID:", nextQuestion.ID)
+		var answer Answer
+		err := db.Model(&nextQuestion).Related(&answer, "Answer").Error
+		if err == nil {
+			fmt.Println("Answer11: ->", answer)
+			var userAnswer UsersAnswer
+			result = db.Where("user_id = ? AND answer_id = ?", user.ID, answer.ID).First(&userAnswer).RecordNotFound()
+			if result == false {
+				db.Where("parent = ?", category.ID).Find(&categories)
+				for _, nextCategory := range categories {
+					nextQuestion = getQuestionFromSubCategory(nextCategory, nextQuestion, user, db)
 				}
+			} else {
+				nextQuestion.Answer = answer
+				return nextQuestion
 			}
 		}
+	} else {
+		db.Where("parent = ?", category.ID).Find(&categories)
+		for _, nextCategory := range categories {
+			nextQuestion = getQuestionFromSubCategory(nextCategory, nextQuestion, user, db)
+		}
 	}
+	// if question.ID == 0 {
+	// 	db.Where("parent = ?", category.ID).Find(&categories)
+	// 	if len(categories) > 0 {
+	// 		for _, nextCategory := range categories {
+	// 			result := db.Where("category_id = ?", nextCategory.ID).First(&question).RecordNotFound()
+	// 			if result == false {
+	// 				var answer Answer
+	// 				err := db.Model(&question).Related(&answer, "Answer").Error
+	// 				if err == nil {
+	// 					fmt.Println("Answer2: ->", answer)
+	// 					var userAnswer UsersAnswer
+	// 					result = db.Where("user_id = ? AND answer_id = ?", user.ID, answer.ID).First(&userAnswer).RecordNotFound()
+	// 					if result == true {
+	// 						question.Answer = answer
+	// 						break
+	// 					}
+	// 				}
+	// 			} else {
+	// 				var nextQuestion Question
+	// 				question = getQuestionFromSubCategory(nextCategory, nextQuestion, user, db)
+	// 				if question.ID != 0 {
+	// 					var answer Answer
+	// 					err := db.Model(&question).Related(&answer, "Answer").Error
+	// 					if err == nil {
+	// 						fmt.Println("Answer3: ->", answer)
+	// 						var userAnswer UsersAnswer
+	// 						result = db.Where("user_id = ? AND answer_id = ?", user.ID, answer.ID).First(&userAnswer).RecordNotFound()
+	// 						if result == true {
+	// 							question.Answer = answer
+	// 							break
+	// 						}
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
 
-	return question
+	return nextQuestion
 }
