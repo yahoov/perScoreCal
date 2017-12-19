@@ -90,8 +90,6 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 				categoriesFailed = categoriesFailed[:0]
 				createQuestionCategories(ctx, in.Category, db, question)
 				if len(categoriesFailed) > 0 {
-					// fmt.Println("RESPONSE:", response)
-					// fmt.Printf("RESPONSE TYPE: %T", response)
 					response.Status = "FAILURE"
 					response.Message = "Failed to create following categories: " + strings.Join(categoriesFailed[:], ", ")
 				}
@@ -111,12 +109,7 @@ func (question Question) CreateInDB(ctx context.Context, in *qpb.CreateQuestionR
 	db.Find(&categories)
 
 	for index, category := range categories {
-		// var responseCategory *qpb.CreateQuestionResponse_Category
-		// response.Categories = make([]*qpb.CreateQuestionResponse_Category, index)
 		response.Categories = append(response.Categories, new(qpb.CreateQuestionResponse_Category))
-		// fmt.Println("Index:", index)
-		// fmt.Println(response.Categories)
-		// response.Categories[index] = responseCategory
 		response.Categories[index].Id = int32(category.ID)
 		response.Categories[index].Name = category.Name
 		response.Categories[index].Parent = int32(category.Parent)
@@ -204,6 +197,7 @@ func (question Question) GetFromDB(ctx context.Context, in *qpb.GetQuestionReque
 				responseAnswer.Option4 = question.Answer.Option4
 				responseAnswer.Option5 = question.Answer.Option5
 				response.Answer = responseAnswer
+				response.Score = user.Score
 			} else {
 				response.Status = "FAILURE"
 				response.Message = "No more open challenge available in this category"
@@ -497,14 +491,12 @@ func assembleQuestionCategories(ctx context.Context, requestCategories []*qpb.Cr
 		if len(requestCategory.Categories) > 0 {
 			assembleQuestionCategories(ctx, requestCategory.Categories)
 		}
-		// if requestCategory.Id == 0 {
 		var category Category
 		category.ID = uint(requestCategory.Id)
 		category.Name = requestCategory.Name
 		category.Approved = false
 		category.Parent = uint(requestCategory.Parent)
 		categories = append(categories, category)
-		// }
 	}
 }
 
@@ -561,43 +553,5 @@ func getQuestionFromSubCategory(category Category, question Question, user User,
 			nextQuestion = getQuestionFromSubCategory(nextCategory, nextQuestion, user, db)
 		}
 	}
-	// if question.ID == 0 {
-	// 	db.Where("parent = ?", category.ID).Find(&categories)
-	// 	if len(categories) > 0 {
-	// 		for _, nextCategory := range categories {
-	// 			result := db.Where("category_id = ?", nextCategory.ID).First(&question).RecordNotFound()
-	// 			if result == false {
-	// 				var answer Answer
-	// 				err := db.Model(&question).Related(&answer, "Answer").Error
-	// 				if err == nil {
-	// 					fmt.Println("Answer2: ->", answer)
-	// 					var userAnswer UsersAnswer
-	// 					result = db.Where("user_id = ? AND answer_id = ?", user.ID, answer.ID).First(&userAnswer).RecordNotFound()
-	// 					if result == true {
-	// 						question.Answer = answer
-	// 						break
-	// 					}
-	// 				}
-	// 			} else {
-	// 				var nextQuestion Question
-	// 				question = getQuestionFromSubCategory(nextCategory, nextQuestion, user, db)
-	// 				if question.ID != 0 {
-	// 					var answer Answer
-	// 					err := db.Model(&question).Related(&answer, "Answer").Error
-	// 					if err == nil {
-	// 						fmt.Println("Answer3: ->", answer)
-	// 						var userAnswer UsersAnswer
-	// 						result = db.Where("user_id = ? AND answer_id = ?", user.ID, answer.ID).First(&userAnswer).RecordNotFound()
-	// 						if result == true {
-	// 							question.Answer = answer
-	// 							break
-	// 						}
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
-
 	return nextQuestion
 }

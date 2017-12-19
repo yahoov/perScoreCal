@@ -35,8 +35,6 @@ func GetWeightRange(category *Category, db *gorm.DB) string {
 	fmt.Println("db", db)
 	var questions []Question
 	err := db.Model(category).Association("Questions").Find(&questions).Error
-	// err := db.Preload("Category", "ID = (?)", category.ID).Find(&questions).Order("Weight asc").Error
-	// db.Model(&category).Related(&questions).Order("Weight asc")
 	if err != nil {
 		log.Errorf("failed to retrieve associated questions: %v", err)
 		return ""

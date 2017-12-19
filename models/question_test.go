@@ -16,7 +16,6 @@ import (
 
 var _ = Describe("Question", func() {
 	var (
-		// user     User
 		question Question
 		in       *qpb.CreateQuestionRequest
 		ctx      context.Context
